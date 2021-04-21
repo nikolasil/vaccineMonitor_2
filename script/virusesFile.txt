@@ -1,0 +1,12 @@
+Ebola
+Marburg
+Rabies
+HIV
+Smallpox
+Hantavirus
+Influenza
+Dengue
+Rotavirus
+SARS-CoV
+SARS-CoV-2
+MERS-CoV
