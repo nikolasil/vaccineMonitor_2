@@ -5,7 +5,7 @@
 
 using namespace std;
 
-int checkArguments(int argc, char* argv[], string& filepath, int& bloomSize);
+int checkArguments(int argc, char* argv[], int& numMonitors, int& bufferSize, int& sizeOfBloom, string& input_dir);
 void checkNew(void* ptr);
 string getInput(string prompt);
 void splitString(string** words, string input, int* length);

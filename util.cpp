@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <sstream>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -6,52 +7,97 @@
 
 #include "util.h"
 
-int checkArguments(int argc, char* argv[], string& filepath, int& bloomSize)
+int checkArguments(int argc, char* argv[], int& numMonitors, int& bufferSize, int& sizeOfBloom, string& input_dir)
 {
+    if (argc != 9)
+    {
+        cout << "ERROR The number of arguments given must be 8" << endl;
+        return 0;
+    }
     struct stat buffer;
-    if (argc != 5)
-    {
-        cout << "ERROR The number of arguments given must be 4" << endl;
-        return 0;
-    }
-    else if (string(argv[1]).compare("-c") == 0 && string(argv[3]).compare("-b") == 0)
-    {
-        if (stat(argv[2], &buffer) != 0)
-        {
-            cout << "ERROR The file " << argv[1] << " don't exists" << endl;
-            return 0;
+    string args[4] = { "-m", "-b", "-s", "-i" };
+    int pos = 1;
+    while (1) {
+        if (pos > 7) {
+            // cout << "Found the 4 args" << endl;
+            break;
         }
-        if (atoi(argv[4]) <= 0)
-        {
-            cout << "ERROR The BloomSize must be unsigned integer" << endl;
-            cout << "ERROR BloomSize given was: " << argv[4] << endl;
-            return 0;
+        int i = 0;
+        for (i = 0; i < 4; i++) {
+            // cout << "pos=" << pos << ",i=" << i << ",arg=" << string(argv[pos]) << ",array=" << args[i] << endl;
+            if (string(argv[pos]).compare(args[i]) == 0) {
+                args[i] = ""; // clear it for future checking
+                if (string(argv[pos]) == "-m") {
+                    // cout << "-m" << endl;
+
+                    string c = string(argv[pos + 1]);
+                    std::string::const_iterator it = c.begin();
+                    while (it != c.end() && isdigit(*it))
+                        ++it;
+
+                    bool check = !c.empty() && it == c.end();
+
+                    if (atoi(argv[pos + 1]) <= 0 || !check)
+                    {
+                        cout << "ERROR The numMonitors must be unsigned integer" << endl;
+                        return 0;
+                    }
+                    numMonitors = atoi(argv[pos + 1]);
+                }
+                else if (string(argv[pos]) == "-b") {
+                    // cout << "-b" << endl;
+
+                    string c = string(argv[pos + 1]);
+                    std::string::const_iterator it = c.begin();
+                    while (it != c.end() && isdigit(*it))
+                        ++it;
+
+                    bool check = !c.empty() && it == c.end();
+
+                    if (atoi(argv[pos + 1]) <= 0 || !check)
+                    {
+                        cout << "ERROR The bufferSize must be unsigned integer" << endl;
+                        return 0;
+                    }
+                    bufferSize = atoi(argv[pos + 1]);
+                }
+                else if (string(argv[pos]) == "-s") {
+                    // cout << "-s" << endl;
+
+                    string c = string(argv[pos + 1]);
+                    std::string::const_iterator it = c.begin();
+                    while (it != c.end() && isdigit(*it))
+                        ++it;
+
+                    bool check = !c.empty() && it == c.end();
+
+                    if (atoi(argv[pos + 1]) <= 0 || !check)
+                    {
+                        cout << "ERROR The sizeOfBloom must be unsigned integer" << endl;
+                        return 0;
+                    }
+                    sizeOfBloom = atoi(argv[pos + 1]);
+                }
+                else if (string(argv[pos]) == "-i") {
+                    // cout << "-i" << endl;
+                    if (stat(argv[pos + 1], &buffer) != 0)
+                    {
+                        cout << "ERROR The input_dir=" << argv[pos + 1] << " don't exists" << endl;
+                        return 0;
+                    }
+                    input_dir = string(argv[pos + 1]);
+                }
+                else {
+                    cout << "Error in arguments" << endl;
+                }
+                pos += 2;
+                break;
+            }
         }
-        filepath = string(argv[2]);
-        bloomSize = atoi(argv[4]);
-    }
-    else if (string(argv[1]).compare("-b") == 0 && string(argv[3]).compare("-c") == 0)
-    {
-        if (stat(argv[4], &buffer) != 0)
-        {
-            cout << "ERROR The file " << argv[1] << " don't exists" << endl;
-            return 0;
+        if (i == 4) {
+            cout << "Error Arguments must start with -m,-b,-s and -i" << endl;
+            break;
         }
-        if (atoi(argv[2]) <= 0)
-        {
-            cout << "ERROR The BloomSize must be unsigned integer" << endl;
-            cout << "ERROR BloomSize given was: " << argv[2] << endl;
-            return 0;
-        }
-        filepath = string(argv[4]);
-        bloomSize = atoi(argv[2]);
-    }
-    else
-    {
-        cout << "ERROR The arguments must be like this: -c FilePath -b BloomSize" << endl;
-        cout << "ERROR OR" << endl;
-        cout << "ERROR The arguments must be like this: -b BloomSize -c FilePath " << endl;
-        return 0;
     }
     return 1;
 }

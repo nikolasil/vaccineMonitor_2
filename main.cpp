@@ -1,20 +1,25 @@
 #include <iostream>
 #include <string>
 
-#include "vaccineMonitor.h"
+#include "travelMonitor.h"
 #include "util.h"
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-    string filepath;
-    int bloomSize;
-    if (!checkArguments(argc, argv, filepath, bloomSize))
+    int numMonitors;
+    int bufferSize;
+    int sizeOfBloom;
+    string input_dir;
+    if (!checkArguments(argc, argv, numMonitors, bufferSize, sizeOfBloom, input_dir))
         return 1;
 
-    vaccineMonitor monitor = vaccineMonitor(bloomSize);
-    monitor.addFromFile(filepath);
-    monitor.startMenu();
+    travelMonitor mainMonitor = travelMonitor(numMonitors, bufferSize, sizeOfBloom, input_dir);
+    mainMonitor.createFIFOs();
+    mainMonitor.createMonitors();
+    mainMonitor.sendFilesToMonitors();
+    mainMonitor.receiveBlooms();
+    mainMonitor.startMenu();
     return 0;
 }
