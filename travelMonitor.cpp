@@ -14,14 +14,24 @@ travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), 
 }
 
 int travelMonitor::createFIFOs() {
-    string directory = this->input_dir + "/";
+    string directory = "pipes/";
     for (int i = 0;i < numMonitors;i++) {
         string num = to_string(i);
-        string name = "fifo" + num;
+        string name = "fifo_tW_mR_" + num;
         string fullname = directory + name;
         char* fifoName = &fullname[0];
 
-        if (mkfifo(fifoName, 0777) == -1) {
+        if (mkfifo(fifoName, 0666) == -1) {
+            if (errno != EEXIST) {
+                cout << "Problem in creating named pipe " << fifoName << endl;
+                return -1;
+            }
+        }
+        name = "fifo_tR_mW_" + num;
+        fullname = directory + name;
+        fifoName = &fullname[0];
+
+        if (mkfifo(fifoName, 0666) == -1) {
             if (errno != EEXIST) {
                 cout << "Problem in creating named pipe " << fifoName << endl;
                 return -1;
@@ -31,23 +41,40 @@ int travelMonitor::createFIFOs() {
 }
 
 void travelMonitor::createMonitors() {
-    pid_t c_pid = fork();
-    if (c_pid == -1) {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    }
-    else if (c_pid > 0) {
-        cout << "printed from parent process " << getpid() << endl;
-        wait(nullptr);
-    }
-    else {
-        cout << "printed from child process " << getpid() << endl;
-        execlp("./a.out", NULL);
-        exit(EXIT_SUCCESS);
+    for (int i = 0;i < numMonitors;i++) {
+        pid_t c_pid = fork();
+        if (c_pid == -1) {
+            perror("fork");
+            exit(EXIT_FAILURE);
+        }
+        else if (c_pid > 0) {
+            cout << "Monitor " << i << " Created" << endl;
+        }
+        else {
+            string num = to_string(i);
+            string pipe0 = "pipes/fifo_tW_mR_" + num;
+            string pipe1 = "pipes/fifo_tR_mW_" + num;
+
+            execlp("./monitor", "monitor.out", pipe0.c_str(), pipe1.c_str(), NULL);
+            exit(EXIT_SUCCESS);
+        }
     }
 }
 
-void travelMonitor::sendFilesToMonitors() {}
+void travelMonitor::sendFilesToMonitors() {
+    for (int i = 0;i < numMonitors;i++) {
+        string num = to_string(i);
+        string pipe0 = "pipes/fifo_tW_mR_" + num;
+        cout << "travelMonitor opening " << pipe0 << endl;
+        int fd = open(pipe0.c_str(), O_WRONLY);
+        cout << "travelMonitor opened " << pipe0 << endl;
+        char a = 'n';
+        if (write(fd, &a, 1) == -1) {
+            cout << "Error in writting" << endl;
+        }
+        close(fd);
+    }
+}
 
 void travelMonitor::receiveBlooms() {}
 

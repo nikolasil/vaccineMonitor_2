@@ -6,7 +6,8 @@ DELETE_PIPES = pipes/*
 
 travelMonitor: clean $(FILES)
 	$(CC) $(CFLAFS) -o travelMonitor $(FILES)
-
+	g++ monitor.cpp -o monitor
+	
 main.o:
 	$(CC) $(CFLAFS) -c main.cpp
 
