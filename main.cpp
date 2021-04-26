@@ -18,6 +18,7 @@ int main(int argc, char* argv[])
     travelMonitor mainMonitor = travelMonitor(numMonitors, bufferSize, sizeOfBloom, input_dir);
     mainMonitor.createFIFOs();
     mainMonitor.createMonitors();
+    mainMonitor.openFifos();
     mainMonitor.sendFilesToMonitors();
     mainMonitor.receiveBlooms();
     mainMonitor.startMenu();

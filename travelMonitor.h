@@ -12,6 +12,7 @@ public:
 
     int createFIFOs();
     void createMonitors();
+    void openFifos();
     void sendFilesToMonitors();
     void receiveBlooms();
     void startMenu();
