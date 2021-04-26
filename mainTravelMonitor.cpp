@@ -19,8 +19,11 @@ int main(int argc, char* argv[])
     mainMonitor.createFIFOs();
     mainMonitor.createMonitors();
     mainMonitor.openFifos();
-    mainMonitor.sendFilesToMonitors();
-    mainMonitor.receiveBlooms();
-    mainMonitor.startMenu();
+    mainMonitor.sendCredentials();
+    mainMonitor.sendCountries();
+    // mainMonitor.printCountryToMonitor();
+    // mainMonitor.receiveBlooms();
+    // mainMonitor.startMenu();
+
     return 0;
 }

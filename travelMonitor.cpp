@@ -9,34 +9,35 @@
 #include <string>
 #include <typeinfo>
 #include <cstring>
+
 #include "travelMonitor.h"
 
 travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
     cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
+    this->countryToMonitor = NULL;
+    this->fifoFD = NULL;
 }
 
-int travelMonitor::createFIFOs() {
+void travelMonitor::createFIFOs() {
     string directory = "pipes/";
     for (int i = 0;i < numMonitors;i++) {
-        string num = to_string(i);
-        string name = "fifo_tW_mR_" + num;
-        string fullname = directory + name;
+        string fullname = "pipes/fifo_tW_mR_" + to_string(i);
         char* fifoName = &fullname[0];
 
-        if (mkfifo(fifoName, 0777) == -1) {
+        if (mkfifo(fifoName, 0666) == -1) {
             if (errno != EEXIST) {
                 cout << "Problem in creating named pipe " << fifoName << endl;
-                return -1;
+                exit(EXIT_FAILURE);
             }
         }
-        name = "fifo_tR_mW_" + num;
-        fullname = directory + name;
+
+        fullname = "pipes/fifo_tR_mW_" + to_string(i);
         fifoName = &fullname[0];
 
-        if (mkfifo(fifoName, 0777) == -1) {
+        if (mkfifo(fifoName, 0666) == -1) {
             if (errno != EEXIST) {
                 cout << "Problem in creating named pipe " << fifoName << endl;
-                return -1;
+                exit(EXIT_FAILURE);
             }
         }
     }
@@ -53,41 +54,40 @@ void travelMonitor::createMonitors() {
             cout << "Monitor " << i << " Created" << endl;
         }
         else {
-            string num = to_string(i);
-            string pipe0 = "pipes/fifo_tW_mR_" + num;
-            string pipe1 = "pipes/fifo_tR_mW_" + num;
-            cout << pipe0 << " " << pipe1 << endl;
-            execlp("./monitor", "monitor.out", pipe0.c_str(), pipe1.c_str(), NULL);
+            string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
+            string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
+            execlp("./Monitor", pipe0.c_str(), pipe1.c_str(), NULL);
         }
     }
 }
 
 void travelMonitor::openFifos() {
     for (int i = 0;i < numMonitors;i++) {
-        string num = to_string(i);
-        string pipe0 = "pipes/fifo_tW_mR_" + num;
-        string pipe1 = "pipes/fifo_tR_mW_" + num;
+        string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
+        string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
         int fd0 = open(pipe0.c_str(), O_WRONLY);
         int fd1 = open(pipe1.c_str(), O_RDONLY);
-        // list with fd
+        // cout << "i=" << i << ",writefd=" << fd0 << ",readfd=" << fd1 << endl;
+        this->addFD(fd1, fd0);
     }
 }
 
-void travelMonitor::sendFilesToMonitors() {
-    // send to all monitors the buffer size
-    // size of bloom
-    int fd;
-    for (int i = 0;i < this->numMonitors;i++) {
-        string num = to_string(i);
-        string pipe0 = "pipes/fifo_tW_mR_" + num;
-        string pipe1 = "pipes/fifo_tR_mW_" + num;
-
+void travelMonitor::sendCredentials() {
+    for (int i = 0;i < numMonitors;i++) {
+        int fd = this->fifoFD->getWriteFifo(i);
+        // cout << "i=" << i << ",writefd=" << fd << endl;
+        if (write(fd, &i, sizeof(int)) == -1)
+            cout << "Error in writting id with errno=" << errno << endl;
         if (write(fd, &this->bufferSize, sizeof(int)) == -1)
-            cout << "Error in writting" << endl;
+            cout << "Error in writting bufferSize with errno=" << errno << endl;
         if (write(fd, &this->sizeOfBloom, sizeof(int)) == -1)
-            cout << "Error in writting" << endl;
-
+            cout << "Error in writting sizeOfBloom with errno=" << errno << endl;
     }
+}
+
+void travelMonitor::sendCountries() {
+    int fd;
+
     int monitor = 0;
     DIR* input;
     struct dirent* dir;
@@ -97,31 +97,29 @@ void travelMonitor::sendFilesToMonitors() {
     input = opendir(in2);
     if (input)
     {
-        cout << " -- Starting to give countries -- " << endl;
+        // cout << " -- Starting to send countries -- " << endl;
         while ((dir = readdir(input)) != NULL)
         {
             string country = dir->d_name;
             if (country.compare("..") == 0 || country.compare(".") == 0)
                 continue;
-            string num = to_string(monitor);
-            string pipe0 = "pipes/fifo_tW_mR_" + num;
 
+            this->addCountryToMonitor(country, monitor);
 
+            fd = this->fifoFD->getWriteFifo(monitor);
             char* to_tranfer = &country[0];
 
             cout << "Sending to monitor " << monitor << " the country " << to_tranfer << endl;
-            int size = strlen(to_tranfer);
-            cout << size << endl;
 
-            if (write(fd, &size, sizeof(int)) == -1)
-                cout << "Error in writting" << endl;
+            int sizeOfCountry = strlen(to_tranfer);
 
+            if (write(fd, &sizeOfCountry, sizeof(int)) == -1)
+                cout << "Error in writting sizeOfCountry with errno=" << errno << endl;
 
             int pos = 0;
             for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
-
                 if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
-                    cout << "Error in writting" << endl;
+                    cout << "Error in writting to_tranfer with errno=" << errno << endl;
 
                 pos += this->bufferSize;
             }
@@ -130,19 +128,35 @@ void travelMonitor::sendFilesToMonitors() {
                 monitor = 0;
 
         }
-        cout << " -- End giving countries -- " << endl;
+        // cout << " -- End sending countries -- " << endl;
         closedir(input);
     }
     for (int i = 0;i < this->numMonitors;i++) {
-        string num = to_string(i);
-        string pipe0 = "pipes/fifo_tW_mR_" + num;
+        fd = this->fifoFD->getWriteFifo(i);
         int end = -1;
         if (write(fd, &end, sizeof(int)) == -1)
-            cout << "Error in writting" << endl;
-
+            cout << "Error in writting end with errno=" << errno << endl;
     }
 }
 
 void travelMonitor::receiveBlooms() {}
 
 void travelMonitor::startMenu() {}
+
+void travelMonitor::addCountryToMonitor(string c, int m) {
+    if (this->countryToMonitor == NULL)
+        this->countryToMonitor = new monitorList(c, m);
+    else
+        this->countryToMonitor = this->countryToMonitor->add(c, m);
+}
+
+void travelMonitor::addFD(int r, int w) {
+    if (this->fifoFD == NULL)
+        this->fifoFD = new fifoFDList(r, w);
+    else
+        this->fifoFD->add(r, w);
+}
+
+void travelMonitor::printCountryToMonitor() {
+    this->countryToMonitor->print();
+}

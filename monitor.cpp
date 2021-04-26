@@ -7,52 +7,75 @@
 #include <unistd.h>
 #include <string>
 #include <cstring>
+
+#include "monitor.h"
+#include "DataStructures/stringList/stringList.h"
 using namespace std;
 
-int main(int argc, char* argv[])
-{
-    if (argc != 3)
-        cout << "Arguments must be 2" << endl;
+Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
+    readFD = open(this->readFifo.c_str(), O_RDONLY);
+    writeFD = open(this->writeFifo.c_str(), O_WRONLY);
+}
 
-    string pipe0 = argv[1];
-    string pipe1 = argv[2];
-    cout << "m " << pipe0.c_str() << " " << pipe1.c_str() << endl;
-    int bufferSize;
-    int bloomSize;
+Monitor::~Monitor() {
+    close(readFD);
+    close(writeFD);
+}
 
-    int fd0 = open(pipe0.c_str(), O_RDONLY);
-    int fd1 = open(pipe1.c_str(), O_WRONLY);
+void Monitor::receiveCredentials() {
+    if (read(readFD, &this->id, sizeof(int)) == -1)
+        cout << "Monitor error in reading id with errno=" << errno << endl;
+    if (read(readFD, &this->bufferSize, sizeof(int)) == -1)
+        cout << "Monitor " << this->id << " error in reading bufferSize with errno=" << errno << endl;
+    if (read(readFD, &this->bloomSize, sizeof(int)) == -1)
+        cout << "Monitor " << this->id << " error in reading bloomSize with errno=" << errno << endl;
+    cout << "Monitor " << this->id << ", bufferSize=" << this->bufferSize << ", bloomSize=" << this->bloomSize << endl;
+}
 
-    if (read(fd0, &bufferSize, sizeof(int)) == -1)
-        cout << "Error in reading" << endl;
-    if (read(fd0, &bloomSize, sizeof(int)) == -1)
-        cout << "Error in reading" << endl;
-
-
-    // cout << bufferSize << " " << bloomSize << endl;
+void Monitor::receiveCountries() {
     while (1) {
-        fd = open(pipe0.c_str(), O_RDONLY);
-        int size;
-        if (read(fd0, &size, sizeof(int)) == -1)
-            cout << "Error in reading" << endl;
+        int sizeOfCountry;
+        if (read(readFD, &sizeOfCountry, sizeof(int)) == -1)
+            cout << "Monitor " << this->id << " error in reading sizeOfCountry with errno=" << errno << endl;
 
-        if (size == -1)
+        if (sizeOfCountry == -1)
             break;
 
-        string output = "";
-        for (int i = 0;i <= size / bufferSize;i++) {
+        string country = "";
+        for (int i = 0;i <= sizeOfCountry / this->bufferSize;i++) {
             char buff[bufferSize];
-            if (read(fd0, &buff, bufferSize) == -1)
-                cout << "Error in reading" << endl;
+            if (read(readFD, &buff, bufferSize) == -1)
+                cout << "Monitor " << this->id << " error in reading buff in receiveCountries with errno=" << errno << endl;
             buff[bufferSize] = '\0';
-            output.append(buff);
-            cout << "readed " << buff << endl;
+            country.append(buff);
+            // cout << "Monitor " << this->id << " readed=" << buff << endl;
         }
-        cout << "Got " << output << endl;
 
+        this->addCountry(country);
+        cout << "Monitor " << this->id << " got country=" << country << endl;
     }
-    close(fd0);
-    close(fd1);
-    cout << "Ended" << endl;
-    return 0;
+}
+
+void Monitor::addCountry(string c) {
+    if (this->countries == NULL)
+        this->countries = new stringList(c);
+    else
+        this->countries = this->countries->add(c);
+}
+
+void Monitor::addVirus(string v) {
+    if (this->viruses == NULL)
+        this->viruses = new stringList(v);
+    else
+        this->viruses = this->viruses->add(v);
+}
+
+void Monitor::printAllCountries() {
+    cout << "Monitor " << this->id << " has the countries" << endl;
+    this->countries->print();
+}
+
+void Monitor::printAllViruses() {
+    cout << "Monitor " << this->id << " has the viruses" << endl;
+    this->viruses->print();
 }

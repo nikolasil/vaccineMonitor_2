@@ -4,23 +4,35 @@
 #include <iostream>
 #include <string>
 
+#include "DataStructures/monitorList/monitorList.h"
+#include "DataStructures/fifoFDList/fifoFDList.h"
+
 using namespace std;
 
 class travelMonitor {
 public:
     travelMonitor(int m, int b, int s, string dir);
 
-    int createFIFOs();
+    void createFIFOs();
     void createMonitors();
     void openFifos();
-    void sendFilesToMonitors();
+    void sendCredentials();
+    void sendCountries();
     void receiveBlooms();
     void startMenu();
+
+    void addCountryToMonitor(string c, int m);
+    void addFD(int r, int w);
+
+    void printCountryToMonitor();
 private:
     int numMonitors;
     int bufferSize;
     int sizeOfBloom;
     string input_dir;
+
+    fifoFDList* fifoFD;
+    monitorList* countryToMonitor;
 };
 
 #endif
