@@ -82,6 +82,18 @@ void travelMonitor::sendCredentials() {
             cout << "Error in writting bufferSize with errno=" << errno << endl;
         if (write(fd, &this->sizeOfBloom, sizeof(int)) == -1)
             cout << "Error in writting sizeOfBloom with errno=" << errno << endl;
+
+        char* to_tranfer = &this->input_dir[0];
+        int length = strlen(to_tranfer);
+        if (write(fd, &length, sizeof(int)) == -1)
+            cout << "Error in writting length with errno=" << errno << endl;
+        int pos = 0;
+        for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
+            if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+
+            pos += this->bufferSize;
+        }
     }
 }
 
