@@ -5,6 +5,8 @@
 #include <string>
 
 #include "DataStructures/monitorList/monitorList.h"
+#include "DataStructures/bloomFilter/bloomFilter.h"
+#include "DataStructures/stringList/stringList.h"
 #include "DataStructures/fifoFDList/fifoFDList.h"
 
 using namespace std;
@@ -24,6 +26,11 @@ public:
     void addCountryToMonitor(string c, int m);
     void addFD(int r, int w);
 
+    void addNewVirus(string virusName);
+    void addNewCountry(string countryName);
+
+    void printAllViruses();
+
     void printCountryToMonitor();
 private:
     int numMonitors;
@@ -33,6 +40,10 @@ private:
 
     fifoFDList* fifoFD;
     monitorList* countryToMonitor;
+
+    stringList* viruses;
+    stringList* countries;
+    bloomFilterList* blooms;
 };
 
 #endif

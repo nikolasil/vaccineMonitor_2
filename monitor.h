@@ -19,12 +19,10 @@ public:
     void receiveCredentials();
     void receiveCountries();
     void readFilesAndCreateStructures();
+    void sendBlooms();
 
     void addFromFile(string filePath);
     void addRecord(int length, string* words, string line);
-
-    // void addCountry(string c);
-    // void addVirus(string v);
 
     void addNewVirus(string virusName);
     void addNewCountry(string countryName);

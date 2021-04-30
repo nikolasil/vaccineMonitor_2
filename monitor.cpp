@@ -273,6 +273,31 @@ int Monitor::checkSyntaxRecord(string errorMessage, int length, string* words, s
     return 0;
 }
 
+void Monitor::sendBlooms() {
+    // send the viruses
+    stringList* temp = this->viruses;
+    while (temp != NULL) {
+        string virus = temp->getString();
+        char* to_tranfer = &virus[0];
+        int sizeOfVirus = strlen(to_tranfer);
+
+        if (write(writeFD, &sizeOfVirus, sizeof(int)) == -1)
+            cout << "Error in writting sizeOfVirus with errno=" << errno << endl;
+        int pos = 0;
+        for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
+            if (write(writeFD, &to_tranfer[pos], this->bufferSize) == -1)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+
+            pos += this->bufferSize;
+        }
+        temp = temp->getNext();
+    }
+    int end = -1;
+    if (write(writeFD, &end, sizeof(int)) == -1)
+        cout << "Error in writting end with errno=" << errno << endl;
+
+}
+
 void Monitor::addNewVirus(string virusName)
 {
     if (this->viruses->search(virusName) == NULL) // if we dont have that virus add it to the list of viruses

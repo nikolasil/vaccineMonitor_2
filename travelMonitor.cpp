@@ -10,12 +10,16 @@
 #include <typeinfo>
 #include <cstring>
 
-#include "travelMonitor.h"
+#include "travelMonitor.h" 
+#include "util.h" 
+#include "DataStructures/bloomFilter/bloomFilter.h"
 
 travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
     cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
     this->countryToMonitor = NULL;
     this->fifoFD = NULL;
+    this->blooms = new bloomFilterList(this->sizeOfBloom);
+    checkNew(this->blooms);
 }
 
 void travelMonitor::createFIFOs() {
@@ -151,7 +155,31 @@ void travelMonitor::sendCountries() {
     }
 }
 
-void travelMonitor::receiveBlooms() {}
+void travelMonitor::receiveBlooms() {
+    for (int i = 0;i < this->numMonitors;i++) {
+        int fd = this->fifoFD->getReadFifo(i);
+        while (1) {
+            int sizeOfVirus;
+            if (read(fd, &sizeOfVirus, sizeof(int)) == -1)
+                cout << "Error in reading sizeOfVirus with errno=" << errno << endl;
+
+            if (sizeOfVirus == -1)
+                break;
+
+            string virus = "";
+            for (int i = 0;i <= sizeOfVirus / this->bufferSize;i++) {
+                char buff[this->bufferSize];
+                if (read(fd, &buff, this->bufferSize) == -1)
+                    cout << "Error in reading buff in receiveBlooms with errno=" << errno << endl;
+                buff[this->bufferSize] = '\0';
+                virus.append(buff);
+                // cout << "Monitor " << this->id << " readed=" << buff << endl;
+            }
+            addNewVirus(virus);
+            cout << "Got virus=" << virus << endl;
+        }
+    }
+}
 
 void travelMonitor::startMenu() {}
 
@@ -162,11 +190,25 @@ void travelMonitor::addCountryToMonitor(string c, int m) {
         this->countryToMonitor = this->countryToMonitor->add(c, m);
 }
 
+void travelMonitor::addNewVirus(string virusName)
+{
+    if (this->viruses->search(virusName) == NULL) // if we dont have that virus add it to the list of viruses
+    {                                         // and make the bloom filter and the skiplist for that virus
+        this->viruses = this->viruses->add(virusName);
+        this->blooms = this->blooms->add(this->viruses);
+    }
+}
+
 void travelMonitor::addFD(int r, int w) {
     if (this->fifoFD == NULL)
         this->fifoFD = new fifoFDList(r, w);
     else
         this->fifoFD->add(r, w);
+}
+
+void travelMonitor::printAllViruses() {
+    cout << "ALL THE viruses" << endl;
+    this->viruses->print();
 }
 
 void travelMonitor::printCountryToMonitor() {

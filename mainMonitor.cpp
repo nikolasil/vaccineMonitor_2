@@ -17,7 +17,6 @@ int main(int argc, char* argv[])
     monitor.receiveCredentials();
     monitor.receiveCountries();
     monitor.readFilesAndCreateStructures();
-    monitor.printAllCountries();
-    monitor.printAllViruses();
+    monitor.sendBlooms();
     return 0;
 }

@@ -21,9 +21,7 @@ int main(int argc, char* argv[])
     mainMonitor.openFifos();
     mainMonitor.sendCredentials();
     mainMonitor.sendCountries();
-    // mainMonitor.printCountryToMonitor();
-    // mainMonitor.receiveBlooms();
-    // mainMonitor.startMenu();
-
+    mainMonitor.receiveBlooms();
+    mainMonitor.printAllViruses();
     return 0;
 }
