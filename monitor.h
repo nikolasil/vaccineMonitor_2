@@ -29,6 +29,10 @@ public:
 
     int checkSyntaxRecord(string errorMessage, int length, string* words, string input);
 
+    void sendStr(string str);
+    string receiveStr();
+    string receiveManyStr(int* end);
+
     void printAllCountries();
     void printAllViruses();
 private:
@@ -41,6 +45,7 @@ private:
 
     int bufferSize;
     int bloomSize;
+
     treeNode* tree;
     bloomFilterList* blooms;
     skipList_List* skipLists;

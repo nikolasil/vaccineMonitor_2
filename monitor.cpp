@@ -51,42 +51,14 @@ void Monitor::receiveCredentials() {
     checkNew(this->blooms);
     cout << "Monitor " << this->id << ", bufferSize=" << this->bufferSize << ", bloomSize=" << this->bloomSize << endl;
 
-
-    int sizeOfDir;
-    if (read(readFD, &sizeOfDir, sizeof(int)) == -1)
-        cout << "Monitor " << this->id << " error in reading sizeOfDir with errno=" << errno << endl;
-
-    string dir = "";
-    for (int i = 0;i <= sizeOfDir / this->bufferSize;i++) {
-        char buff[this->bufferSize];
-        if (read(readFD, &buff, this->bufferSize) == -1)
-            cout << "Monitor " << this->id << " error in reading buff in receiveCredentials with errno=" << errno << endl;
-        buff[this->bufferSize] = '\0';
-        dir.append(buff);
-
-    }
-    this->generalDirectory = dir;
+    this->generalDirectory = receiveStr();
 
 }
 
 void Monitor::receiveCountries() {
-    while (1) {
-        int sizeOfCountry;
-        if (read(readFD, &sizeOfCountry, sizeof(int)) == -1)
-            cout << "Monitor " << this->id << " error in reading sizeOfCountry with errno=" << errno << endl;
-
-        if (sizeOfCountry == -1)
-            break;
-
-        string country = "";
-        for (int i = 0;i <= sizeOfCountry / this->bufferSize;i++) {
-            char buff[this->bufferSize];
-            if (read(readFD, &buff, this->bufferSize) == -1)
-                cout << "Monitor " << this->id << " error in reading buff in receiveCountries with errno=" << errno << endl;
-            buff[this->bufferSize] = '\0';
-            country.append(buff);
-            // cout << "Monitor " << this->id << " readed=" << buff << endl;
-        }
+    int end = 0;
+    while (end != -1) {
+        string country = receiveManyStr(&end);
         this->addNewCountry(country);
         cout << "Monitor " << this->id << " got country=" << country << endl;
     }
@@ -277,25 +249,30 @@ void Monitor::sendBlooms() {
     // send the viruses
     stringList* temp = this->viruses;
     while (temp != NULL) {
-        string virus = temp->getString();
-        char* to_tranfer = &virus[0];
-        int sizeOfVirus = strlen(to_tranfer);
-
-        if (write(writeFD, &sizeOfVirus, sizeof(int)) == -1)
-            cout << "Error in writting sizeOfVirus with errno=" << errno << endl;
-        int pos = 0;
-        for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
-            if (write(writeFD, &to_tranfer[pos], this->bufferSize) == -1)
-                cout << "Error in writting to_tranfer with errno=" << errno << endl;
-
-            pos += this->bufferSize;
-        }
+        sendStr(temp->getString());
         temp = temp->getNext();
     }
     int end = -1;
     if (write(writeFD, &end, sizeof(int)) == -1)
         cout << "Error in writting end with errno=" << errno << endl;
 
+    temp = this->viruses;
+    bloomFilter* bloomV = this->blooms->getBloom(temp);
+    while (bloomV != NULL) {
+        sendStr(temp->getString());
+        for (int i = 0;i < bloomV->getSize();i++) {
+            if (bloomV->getBit(i) == 1)
+                if (write(writeFD, &i, sizeof(int)) == -1)
+                    cout << "Error in writting i with errno=" << errno << endl;
+        }
+
+        int end = -1;
+        if (write(writeFD, &end, sizeof(int)) == -1)
+            cout << "Error in writting end with errno=" << errno << endl;
+
+        temp = temp->getNext();
+        bloomV = this->blooms->getBloom(temp);
+    }
 }
 
 void Monitor::addNewVirus(string virusName)
@@ -314,6 +291,58 @@ void Monitor::addNewCountry(string countryName)
     {
         this->countries = this->countries->add(countryName);
     }
+}
+
+void Monitor::sendStr(string str) {
+    char* to_tranfer = &str[0];
+    int sizeOfStr = strlen(to_tranfer);
+
+    if (write(writeFD, &sizeOfStr, sizeof(int)) == -1)
+        cout << "Error in writting sizeOfStr with errno=" << errno << endl;
+
+    int pos = 0;
+    for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
+        if (write(writeFD, &to_tranfer[pos], this->bufferSize) == -1)
+            cout << "Error in writting to_tranfer with errno=" << errno << endl;
+        pos += this->bufferSize;
+    }
+}
+
+string Monitor::receiveStr() {
+    int sizeOfStr;
+    if (read(readFD, &sizeOfStr, sizeof(int)) == -1)
+        cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
+
+    string str = "";
+    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+        char buff[this->bufferSize];
+        if (read(readFD, &buff, this->bufferSize) == -1)
+            cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+        buff[this->bufferSize] = '\0';
+        str.append(buff);
+    }
+    return str;
+}
+
+string Monitor::receiveManyStr(int* end) {
+    int sizeOfStr;
+    if (read(readFD, &sizeOfStr, sizeof(int)) == -1)
+        cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
+
+    if (sizeOfStr == -1) {
+        *end = -1;
+        return "";
+    }
+
+    string str = "";
+    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+        char buff[this->bufferSize];
+        if (read(readFD, &buff, this->bufferSize) == -1)
+            cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+        buff[this->bufferSize] = '\0';
+        str.append(buff);
+    }
+    return str;
 }
 
 void Monitor::printAllCountries() {

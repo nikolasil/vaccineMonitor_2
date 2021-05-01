@@ -87,17 +87,7 @@ void travelMonitor::sendCredentials() {
         if (write(fd, &this->sizeOfBloom, sizeof(int)) == -1)
             cout << "Error in writting sizeOfBloom with errno=" << errno << endl;
 
-        char* to_tranfer = &this->input_dir[0];
-        int length = strlen(to_tranfer);
-        if (write(fd, &length, sizeof(int)) == -1)
-            cout << "Error in writting length with errno=" << errno << endl;
-        int pos = 0;
-        for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
-            if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
-                cout << "Error in writting to_tranfer with errno=" << errno << endl;
-
-            pos += this->bufferSize;
-        }
+        sendStr(i, this->input_dir);
     }
 }
 
@@ -113,7 +103,6 @@ void travelMonitor::sendCountries() {
     input = opendir(in2);
     if (input)
     {
-        // cout << " -- Starting to send countries -- " << endl;
         while ((dir = readdir(input)) != NULL)
         {
             string country = dir->d_name;
@@ -122,29 +111,13 @@ void travelMonitor::sendCountries() {
 
             this->addCountryToMonitor(country, monitor);
 
-            fd = this->fifoFD->getWriteFifo(monitor);
-            char* to_tranfer = &country[0];
+            sendStr(monitor, country);
 
-            cout << "Sending to monitor " << monitor << " the country " << to_tranfer << endl;
-
-            int sizeOfCountry = strlen(to_tranfer);
-
-            if (write(fd, &sizeOfCountry, sizeof(int)) == -1)
-                cout << "Error in writting sizeOfCountry with errno=" << errno << endl;
-
-            int pos = 0;
-            for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
-                if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
-                    cout << "Error in writting to_tranfer with errno=" << errno << endl;
-
-                pos += this->bufferSize;
-            }
             monitor++;
             if (monitor >= this->numMonitors)
                 monitor = 0;
 
         }
-        // cout << " -- End sending countries -- " << endl;
         closedir(input);
     }
     for (int i = 0;i < this->numMonitors;i++) {
@@ -157,31 +130,76 @@ void travelMonitor::sendCountries() {
 
 void travelMonitor::receiveBlooms() {
     for (int i = 0;i < this->numMonitors;i++) {
-        int fd = this->fifoFD->getReadFifo(i);
-        while (1) {
-            int sizeOfVirus;
-            if (read(fd, &sizeOfVirus, sizeof(int)) == -1)
-                cout << "Error in reading sizeOfVirus with errno=" << errno << endl;
-
-            if (sizeOfVirus == -1)
-                break;
-
-            string virus = "";
-            for (int i = 0;i <= sizeOfVirus / this->bufferSize;i++) {
-                char buff[this->bufferSize];
-                if (read(fd, &buff, this->bufferSize) == -1)
-                    cout << "Error in reading buff in receiveBlooms with errno=" << errno << endl;
-                buff[this->bufferSize] = '\0';
-                virus.append(buff);
-                // cout << "Monitor " << this->id << " readed=" << buff << endl;
-            }
+        int end = 0;
+        while (end != -1) {
+            string virus = receiveManyStr(i, &end);
             addNewVirus(virus);
             cout << "Got virus=" << virus << endl;
         }
     }
+
+    // for (int i = 0;i < this->numMonitors;i++) {
+    //     int fd = this->fifoFD->getReadFifo(i);
+    // }
 }
 
 void travelMonitor::startMenu() {}
+
+void travelMonitor::sendStr(int monitor, string str) {
+    int fd = this->fifoFD->getWriteFifo(monitor);
+    char* to_tranfer = &str[0];
+    int sizeOfStr = strlen(to_tranfer);
+
+    if (write(fd, &sizeOfStr, sizeof(int)) == -1)
+        cout << "Error in writting sizeOfStr with errno=" << errno << endl;
+
+    int pos = 0;
+    for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
+        if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
+            cout << "Error in writting to_tranfer with errno=" << errno << endl;
+
+        pos += this->bufferSize;
+    }
+}
+
+string travelMonitor::receiveStr(int monitor) {
+    int fd = this->fifoFD->getReadFifo(monitor);
+    int sizeOfStr;
+    if (read(fd, &sizeOfStr, sizeof(int)) == -1)
+        cout << "Error in reading sizeOfStr with errno=" << errno << endl;
+
+    string str = "";
+    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+        char buff[this->bufferSize];
+        if (read(fd, &buff, this->bufferSize) == -1)
+            cout << "Error in reading buff with errno=" << errno << endl;
+        buff[this->bufferSize] = '\0';
+        str.append(buff);
+    }
+    return str;
+}
+
+string travelMonitor::receiveManyStr(int monitor, int* end) {
+    int fd = this->fifoFD->getReadFifo(monitor);
+    int sizeOfStr;
+    if (read(fd, &sizeOfStr, sizeof(int)) == -1)
+        cout << "Error in reading sizeOfStr with errno=" << errno << endl;
+
+    if (sizeOfStr == -1) {
+        *end = -1;
+        return "";
+    }
+
+    string str = "";
+    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+        char buff[this->bufferSize];
+        if (read(fd, &buff, this->bufferSize) == -1)
+            cout << "Error in reading buff with errno=" << errno << endl;
+        buff[this->bufferSize] = '\0';
+        str.append(buff);
+    }
+    return str;
+}
 
 void travelMonitor::addCountryToMonitor(string c, int m) {
     if (this->countryToMonitor == NULL)

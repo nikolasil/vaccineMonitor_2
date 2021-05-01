@@ -23,6 +23,10 @@ public:
     void receiveBlooms();
     void startMenu();
 
+    void sendStr(int monitor, string str);
+    string receiveStr(int monitor);
+    string receiveManyStr(int monitor, int* end);
+
     void addCountryToMonitor(string c, int m);
     void addFD(int r, int w);
 
