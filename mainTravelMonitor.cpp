@@ -22,6 +22,5 @@ int main(int argc, char* argv[])
     mainMonitor.sendCredentials();
     mainMonitor.sendCountries();
     mainMonitor.receiveBlooms();
-    // mainMonitor.printAllViruses();
     return 0;
 }

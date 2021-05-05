@@ -92,21 +92,17 @@ void travelMonitor::sendCredentials() {
 }
 
 void travelMonitor::sendCountries() {
-    int fd;
-
     int monitor = 0;
-    DIR* input;
-    struct dirent* dir;
-    string in = this->input_dir;
-    char* in2 = &in[0];
+    int count;
 
-    input = opendir(in2);
-    if (input)
-    {
-        while ((dir = readdir(input)) != NULL)
-        {
-            string country = dir->d_name;
-            // cout << country << " " << monitor << endl;
+    struct dirent** coutriesDir;
+    count = scandir(this->input_dir.c_str(), &coutriesDir, NULL, alphasort);
+    if (count < 0)
+        perror("scandir");
+    else {
+        for (int i = 0;i < count;i++) {
+            string country = coutriesDir[i]->d_name;
+            cout << country << "->" << monitor << endl;
             if (country.compare("..") == 0 || country.compare(".") == 0)
                 continue;
 
@@ -117,10 +113,12 @@ void travelMonitor::sendCountries() {
             monitor++;
             if (monitor >= this->numMonitors)
                 monitor = 0;
-
+            free(coutriesDir[i]);
         }
-        closedir(input);
+        free(coutriesDir);
     }
+
+    int fd;
     for (int i = 0;i < this->numMonitors;i++) {
         fd = this->fifoFD->getWriteFifo(i);
         int end = -1;
@@ -130,38 +128,60 @@ void travelMonitor::sendCountries() {
 }
 
 void travelMonitor::receiveBlooms() {
-    for (int i = 0;i < this->numMonitors;i++) {
-        int end = 0;
-        while (end != -1) {
-            string virus = receiveManyStr(i, &end);
-            addNewVirus(virus);
-            cout << "Got virus=" << virus << endl;
+    fd_set fileDecriptorSet;
+
+    int totalRead = 0;
+    int flag = 0;
+    while (!flag) {
+        FD_ZERO(&fileDecriptorSet);
+        for (int i = 0;i < this->numMonitors;i++) {
+            FD_SET(this->fifoFD->getReadFifo(i), &fileDecriptorSet);
         }
-    }
-    cout << "got all the viruses" << endl;
-    for (int i = 0;i < this->numMonitors;i++) {
-        while (1) {
-            string virus = receiveStr(i);
-            cout << virus << endl;
-            if (virus.compare("END SEND BLOOMS") == 0)
-                break;
-            int bit;
-            int fd = this->fifoFD->getReadFifo(i);
-            while (1) {
-                if (read(fd, &bit, sizeof(int)) == -1)
-                    cout << "Error in reading bit with errno=" << errno << endl;
-                if (bit == -1)
-                    break;
-                this->blooms->getBloom(this->viruses->search(virus))->setBit(bit, 1);
+        select(this->fifoFD->getReadFifo(this->numMonitors - 1) + 1, &fileDecriptorSet, NULL, NULL, NULL);
+
+        for (int i = 0;i < this->numMonitors;i++) {
+            if (FD_ISSET(this->fifoFD->getReadFifo(i), &fileDecriptorSet)) {
+                cout << "Monitor" << i << " is ready!" << endl;
+                int end = 0;
+                while (end != -1) {
+                    string virus = receiveManyStr(i, &end);
+                    addNewVirus(virus);
+                    cout << "Got virus=" << virus << " from Monitor " << i << endl;
+                }
+                cout << "Updating blooms from Monitor " << i << endl;
+                while (1) {
+                    string virus = receiveStr(i);
+
+                    if (virus.compare("END BLOOMS") == 0) {
+                        cout << "Done updating blooms" << endl;
+                        break;
+                    }
+                    int bit;
+                    int fd = this->fifoFD->getReadFifo(i);
+                    while (1) {
+                        if (read(fd, &bit, sizeof(int)) == -1)
+                            cout << "Error in reading bit with errno=" << errno << endl;
+                        if (bit == -1)
+                            break;
+                        this->blooms->getBloom(this->viruses->search(virus))->setBit(bit, 1);
+                    }
+                    // cout << virus << " ";
+                    // this->blooms->getBloom(this->viruses->search(virus))->print();
+                }
+                totalRead++;
             }
-            this->blooms->getBloom(this->viruses->search(virus))->print();
-
+            if (totalRead == this->numMonitors) {
+                flag = 1;
+                break;
+            }
         }
     }
-
 }
 
-void travelMonitor::startMenu() {}
+void travelMonitor::startMenu() {
+    cout << "Menu Started" << endl;
+    cout << "Menu Ended" << endl;
+}
 
 void travelMonitor::sendStr(int monitor, string str) {
     int fd = this->fifoFD->getWriteFifo(monitor);
