@@ -255,11 +255,15 @@ void Monitor::sendBlooms() {
     int end = -1;
     if (write(writeFD, &end, sizeof(int)) == -1)
         cout << "Error in writting end with errno=" << errno << endl;
-
+    // send the viruses
+    cout << "send all the viruses" << endl;
+    // send all the bits that are 1 for every virus
     temp = this->viruses;
     bloomFilter* bloomV = this->blooms->getBloom(temp);
-    while (bloomV != NULL) {
+    while (1) {
         sendStr(temp->getString());
+        cout << "Monitor " << this->id << " send bloom of virus " << temp->getString() << ":";
+        this->blooms->getBloom(temp)->print();
         for (int i = 0;i < bloomV->getSize();i++) {
             if (bloomV->getBit(i) == 1)
                 if (write(writeFD, &i, sizeof(int)) == -1)
@@ -271,8 +275,11 @@ void Monitor::sendBlooms() {
             cout << "Error in writting end with errno=" << errno << endl;
 
         temp = temp->getNext();
+        if (temp == NULL)
+            sendStr("END SEND BLOOMS");
         bloomV = this->blooms->getBloom(temp);
     }
+
 }
 
 void Monitor::addNewVirus(string virusName)

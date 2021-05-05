@@ -105,6 +105,15 @@ int bloomFilter::check(int number)
     return flag;
 }
 
+void bloomFilter::print() {
+    for (int i = 0; i < this->getSize(); i++)
+        if (this->getBit(i) == 1)
+            cout << 1;
+        else
+            cout << 0;
+    cout << endl;
+}
+
 /*
 - - - bloomFilterList Methods Iimplemantation - - -
 */

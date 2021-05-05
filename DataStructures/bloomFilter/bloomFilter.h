@@ -23,6 +23,7 @@ public:
     void add(int number);
     int check(int number);
 
+    void print();
 private:
     unsigned long djb2(unsigned char* str);
     unsigned long sdbm(unsigned char* str);

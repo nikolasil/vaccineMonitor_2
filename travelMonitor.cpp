@@ -106,6 +106,7 @@ void travelMonitor::sendCountries() {
         while ((dir = readdir(input)) != NULL)
         {
             string country = dir->d_name;
+            // cout << country << " " << monitor << endl;
             if (country.compare("..") == 0 || country.compare(".") == 0)
                 continue;
 
@@ -137,10 +138,27 @@ void travelMonitor::receiveBlooms() {
             cout << "Got virus=" << virus << endl;
         }
     }
+    cout << "got all the viruses" << endl;
+    for (int i = 0;i < this->numMonitors;i++) {
+        while (1) {
+            string virus = receiveStr(i);
+            cout << virus << endl;
+            if (virus.compare("END SEND BLOOMS") == 0)
+                break;
+            int bit;
+            int fd = this->fifoFD->getReadFifo(i);
+            while (1) {
+                if (read(fd, &bit, sizeof(int)) == -1)
+                    cout << "Error in reading bit with errno=" << errno << endl;
+                if (bit == -1)
+                    break;
+                this->blooms->getBloom(this->viruses->search(virus))->setBit(bit, 1);
+            }
+            this->blooms->getBloom(this->viruses->search(virus))->print();
 
-    // for (int i = 0;i < this->numMonitors;i++) {
-    //     int fd = this->fifoFD->getReadFifo(i);
-    // }
+        }
+    }
+
 }
 
 void travelMonitor::startMenu() {}
