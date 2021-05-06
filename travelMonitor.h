@@ -28,7 +28,8 @@ public:
     string receiveManyStr(int monitor, int* end);
 
     void addCountryToMonitor(string c, int m);
-    void addFD(int r, int w);
+    void addMonitor(int pid, int id);
+    void addFdToMonitor(int m, int r, int w);
 
     void addNewVirus(string virusName);
     void addNewCountry(string countryName);

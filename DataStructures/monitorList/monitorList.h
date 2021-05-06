@@ -16,26 +16,35 @@ class monitorList
 {
 public:
     monitorList();
-    monitorList(int r, int w);
+    monitorList(int pid, int id);
     ~monitorList();
 
-    monitorList* add(int r, int w);
+    monitorList* add(int pid, int id);
+    monitorList* addFD(int m, int r, int w);
     int getReadFifo(int m);
     int getWriteFifo(int m);
+    int getPID(int m);
+    int getID(int pid);
 
     // GETTERS
     int getReadFD() { return this->readFD; }
     int getWriteFD() { return this->writeFD; }
+    int getPID() { return this->pid; }
+    int getID() { return this->id; }
     monitorList* getNext() { return this->next; }
 
     // SETTERS
     void setReadFD(int r) { this->readFD = r; }
     void setWriteFD(int w) { this->writeFD = w; }
+    void setPID(int p) { this->pid = p; }
+    void setID(int i) { this->id = i; }
     void setNext(monitorList* n) { this->next = n; }
 
 private:
     int readFD;
     int writeFD;
+    int pid;
+    int id;
 
     monitorList* next;
 };

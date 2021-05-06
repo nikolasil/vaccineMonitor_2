@@ -5,7 +5,7 @@
 
 monitorList::monitorList() {}
 
-monitorList::monitorList(int r, int w) : readFD(r), writeFD(w) {
+monitorList::monitorList(int pid, int id) : pid(pid), id(id) {
     this->next = NULL;
 }
 
@@ -15,16 +15,26 @@ monitorList::~monitorList()
         delete this->getNext();
 }
 
-monitorList* monitorList::add(int r, int w)
+monitorList* monitorList::add(int pid, int id)
 {
     monitorList* temp = this;
     while (temp->getNext() != NULL)
         temp = temp->getNext();
 
-    monitorList* new_node = new monitorList(r, w);
+    monitorList* new_node = new monitorList(pid, id);
     checkNew(new_node);
     temp->setNext(new_node);
     return new_node;
+}
+
+monitorList* monitorList::addFD(int m, int r, int w)
+{
+    monitorList* temp = this;
+    for (int i = 0;i < m;i++)
+        temp = temp->getNext();
+    temp->setReadFD(r);
+    temp->setWriteFD(w);
+    return temp;
 }
 
 int monitorList::getReadFifo(int m) {
@@ -41,4 +51,22 @@ int monitorList::getWriteFifo(int m) {
         temp = temp->getNext();
 
     return temp->getWriteFD();
+}
+
+int monitorList::getPID(int m) {
+    monitorList* temp = this;
+    for (int i = 0;i < m;i++)
+        temp = temp->getNext();
+
+    return temp->getPID();
+}
+
+int monitorList::getID(int pid) {
+    monitorList* temp = this;
+    while (temp != NULL) {
+        if (temp->getPID() == pid)
+            return temp->getID();
+        temp = temp->getNext();
+    }
+    return -1;
 }

@@ -57,10 +57,12 @@ void travelMonitor::createMonitors() {
         }
         else if (c_pid > 0) {
             cout << "Monitor " << i << " Created" << endl;
+            this->addMonitor(c_pid, i);
         }
         else {
             string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
             string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
+
             execlp("./Monitor", pipe0.c_str(), pipe1.c_str(), NULL);
         }
     }
@@ -73,7 +75,7 @@ void travelMonitor::openFifos() {
         int fd0 = open(pipe0.c_str(), O_WRONLY);
         int fd1 = open(pipe1.c_str(), O_RDONLY);
         // cout << "i=" << i << ",writefd=" << fd0 << ",readfd=" << fd1 << endl;
-        this->addFD(fd1, fd0);
+        this->addFdToMonitor(i, fd1, fd0);
     }
 }
 
@@ -258,11 +260,15 @@ void travelMonitor::addNewVirus(string virusName)
     }
 }
 
-void travelMonitor::addFD(int r, int w) {
+void travelMonitor::addMonitor(int pid, int id) {
     if (this->monitors == NULL)
-        this->monitors = new monitorList(r, w);
+        this->monitors = new monitorList(pid, id);
     else
-        this->monitors->add(r, w);
+        this->monitors->add(pid, id);
+}
+
+void travelMonitor::addFdToMonitor(int m, int r, int w) {
+    this->monitors->addFD(m, r, w);
 }
 
 void travelMonitor::printAllViruses() {
