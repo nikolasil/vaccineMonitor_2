@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <signal.h>
 
 #include "DataStructures/bloomFilter/bloomFilter.h"
 #include "DataStructures/binaryAvlTree/tree.h"
@@ -23,7 +24,7 @@ public:
 
     void addFromFile(string filePath);
     void addRecord(int length, string* words, string line);
-
+    // void signal_handler_2(int signo);
     void addNewVirus(string virusName);
     void addNewCountry(string countryName);
 
@@ -37,6 +38,8 @@ public:
     void printAllViruses();
 private:
     int id;
+    // struct sigaction handler;
+
     string generalDirectory;
     string readFifo;
     string writeFifo;

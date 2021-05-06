@@ -5,10 +5,9 @@
     Every time a country name or a virus name is needed a pointer to the node is made.
 */
 
-#ifndef MONITORLIST_H
-#define MONITORLIST_H
+#ifndef monitorList_H
+#define monitorList_H
 
-#include <iostream>
 #include <string>
 
 using namespace std;
@@ -17,28 +16,27 @@ class monitorList
 {
 public:
     monitorList();
-    monitorList(string d, int m);
+    monitorList(int r, int w);
     ~monitorList();
 
-    void print();     // print this and all the next nodes
-
-    monitorList* add(string d, int m);
-    monitorList* remove(string d);
-    monitorList* search(string d);
+    monitorList* add(int r, int w);
+    int getReadFifo(int m);
+    int getWriteFifo(int m);
 
     // GETTERS
-    string getCountry() { return this->country; }
+    int getReadFD() { return this->readFD; }
+    int getWriteFD() { return this->writeFD; }
     monitorList* getNext() { return this->next; }
-    int getMonitor() { return this->monitor; }
 
     // SETTERS
-    void setCountry(string s) { this->country = s; }
+    void setReadFD(int r) { this->readFD = r; }
+    void setWriteFD(int w) { this->writeFD = w; }
     void setNext(monitorList* n) { this->next = n; }
-    void setMonitor(int m) { this->monitor = m; }
 
 private:
-    string country;
-    int monitor;
+    int readFD;
+    int writeFD;
+
     monitorList* next;
 };
 

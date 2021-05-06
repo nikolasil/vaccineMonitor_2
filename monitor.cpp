@@ -9,6 +9,7 @@
 #include <string>
 #include <cstring>
 #include <fstream>
+#include <signal.h>
 
 #include "monitor.h"
 #include "DataStructures/stringList/stringList.h"
@@ -19,6 +20,11 @@
 #include "util.h"
 
 using namespace std;
+
+// void signal_handler_2(int signo) {
+//     cout << "Handler signal_handler_2() with signo=" << signo << endl;
+//     exit(1);
+// }
 
 Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     readFD = open(this->readFifo.c_str(), O_RDONLY);
@@ -33,6 +39,9 @@ Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
 
     this->skipLists = new skipList_List();
     checkNew(this->skipLists);
+
+    // this->handler.sa_handler = signal_handler_2;
+    // sigaction(SIGINT, &this->handler, NULL);
 }
 
 Monitor::~Monitor() {
@@ -265,8 +274,8 @@ void Monitor::sendBlooms() {
     bloomFilter* bloomV = this->blooms->getBloom(temp);
     while (1) {
         sendStr(temp->getString());
-        // cout << "Monitor " << this->id << " send bloom of virus " << temp->getString() << ":";
-        // this->blooms->getBloom(temp)->print();
+        cout << "Monitor " << this->id << " send bloom of virus " << temp->getString() << ":";
+        this->blooms->getBloom(temp)->print();
         for (int i = 0;i < bloomV->getSize();i++) {
             if (bloomV->getBit(i) == 1)
                 if (write(writeFD, &i, sizeof(int)) == -1)

@@ -4,10 +4,10 @@
 #include <iostream>
 #include <string>
 
-#include "DataStructures/monitorList/monitorList.h"
+#include "DataStructures/monitorCountryPairList/monitorCountryPairList.h"
 #include "DataStructures/bloomFilter/bloomFilter.h"
 #include "DataStructures/stringList/stringList.h"
-#include "DataStructures/fifoFDList/fifoFDList.h"
+#include "DataStructures/monitorList/monitorList.h"
 
 using namespace std;
 
@@ -42,8 +42,8 @@ private:
     int sizeOfBloom;
     string input_dir;
 
-    fifoFDList* fifoFD;
-    monitorList* countryToMonitor;
+    monitorList* monitors;
+    monitorCountryPairList* countryToMonitor;
 
     stringList* viruses;
     stringList* countries;

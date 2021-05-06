@@ -4,6 +4,8 @@
 using namespace std;
 
 #include "monitor.h"
+#include "util.h"
+
 
 int main(int argc, char* argv[])
 {

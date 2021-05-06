@@ -17,7 +17,8 @@
 travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
     cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
     this->countryToMonitor = NULL;
-    this->fifoFD = NULL;
+    this->monitors = NULL;
+    this->viruses = new stringList();
     this->blooms = new bloomFilterList(this->sizeOfBloom);
     checkNew(this->blooms);
 }
@@ -78,7 +79,7 @@ void travelMonitor::openFifos() {
 
 void travelMonitor::sendCredentials() {
     for (int i = 0;i < numMonitors;i++) {
-        int fd = this->fifoFD->getWriteFifo(i);
+        int fd = this->monitors->getWriteFifo(i);
         // cout << "i=" << i << ",writefd=" << fd << endl;
         if (write(fd, &i, sizeof(int)) == -1)
             cout << "Error in writting id with errno=" << errno << endl;
@@ -120,7 +121,7 @@ void travelMonitor::sendCountries() {
 
     int fd;
     for (int i = 0;i < this->numMonitors;i++) {
-        fd = this->fifoFD->getWriteFifo(i);
+        fd = this->monitors->getWriteFifo(i);
         int end = -1;
         if (write(fd, &end, sizeof(int)) == -1)
             cout << "Error in writting end with errno=" << errno << endl;
@@ -135,12 +136,12 @@ void travelMonitor::receiveBlooms() {
     while (!flag) {
         FD_ZERO(&fileDecriptorSet);
         for (int i = 0;i < this->numMonitors;i++) {
-            FD_SET(this->fifoFD->getReadFifo(i), &fileDecriptorSet);
+            FD_SET(this->monitors->getReadFifo(i), &fileDecriptorSet);
         }
-        select(this->fifoFD->getReadFifo(this->numMonitors - 1) + 1, &fileDecriptorSet, NULL, NULL, NULL);
+        select(this->monitors->getReadFifo(this->numMonitors - 1) + 1, &fileDecriptorSet, NULL, NULL, NULL);
 
         for (int i = 0;i < this->numMonitors;i++) {
-            if (FD_ISSET(this->fifoFD->getReadFifo(i), &fileDecriptorSet)) {
+            if (FD_ISSET(this->monitors->getReadFifo(i), &fileDecriptorSet)) {
                 cout << "Monitor" << i << " is ready!" << endl;
                 int end = 0;
                 while (end != -1) {
@@ -150,6 +151,7 @@ void travelMonitor::receiveBlooms() {
                 }
                 cout << "Updating blooms from Monitor " << i << endl;
                 while (1) {
+
                     string virus = receiveStr(i);
 
                     if (virus.compare("END BLOOMS") == 0) {
@@ -157,16 +159,17 @@ void travelMonitor::receiveBlooms() {
                         break;
                     }
                     int bit;
-                    int fd = this->fifoFD->getReadFifo(i);
+                    int fd = this->monitors->getReadFifo(i);
                     while (1) {
+
                         if (read(fd, &bit, sizeof(int)) == -1)
                             cout << "Error in reading bit with errno=" << errno << endl;
                         if (bit == -1)
                             break;
                         this->blooms->getBloom(this->viruses->search(virus))->setBit(bit, 1);
                     }
-                    // cout << virus << " ";
-                    // this->blooms->getBloom(this->viruses->search(virus))->print();
+                    cout << virus << " ";
+                    this->blooms->getBloom(this->viruses->search(virus))->print();
                 }
                 totalRead++;
             }
@@ -184,7 +187,7 @@ void travelMonitor::startMenu() {
 }
 
 void travelMonitor::sendStr(int monitor, string str) {
-    int fd = this->fifoFD->getWriteFifo(monitor);
+    int fd = this->monitors->getWriteFifo(monitor);
     char* to_tranfer = &str[0];
     int sizeOfStr = strlen(to_tranfer);
 
@@ -201,7 +204,7 @@ void travelMonitor::sendStr(int monitor, string str) {
 }
 
 string travelMonitor::receiveStr(int monitor) {
-    int fd = this->fifoFD->getReadFifo(monitor);
+    int fd = this->monitors->getReadFifo(monitor);
     int sizeOfStr;
     if (read(fd, &sizeOfStr, sizeof(int)) == -1)
         cout << "Error in reading sizeOfStr with errno=" << errno << endl;
@@ -218,7 +221,7 @@ string travelMonitor::receiveStr(int monitor) {
 }
 
 string travelMonitor::receiveManyStr(int monitor, int* end) {
-    int fd = this->fifoFD->getReadFifo(monitor);
+    int fd = this->monitors->getReadFifo(monitor);
     int sizeOfStr;
     if (read(fd, &sizeOfStr, sizeof(int)) == -1)
         cout << "Error in reading sizeOfStr with errno=" << errno << endl;
@@ -241,7 +244,7 @@ string travelMonitor::receiveManyStr(int monitor, int* end) {
 
 void travelMonitor::addCountryToMonitor(string c, int m) {
     if (this->countryToMonitor == NULL)
-        this->countryToMonitor = new monitorList(c, m);
+        this->countryToMonitor = new monitorCountryPairList(c, m);
     else
         this->countryToMonitor = this->countryToMonitor->add(c, m);
 }
@@ -256,10 +259,10 @@ void travelMonitor::addNewVirus(string virusName)
 }
 
 void travelMonitor::addFD(int r, int w) {
-    if (this->fifoFD == NULL)
-        this->fifoFD = new fifoFDList(r, w);
+    if (this->monitors == NULL)
+        this->monitors = new monitorList(r, w);
     else
-        this->fifoFD->add(r, w);
+        this->monitors->add(r, w);
 }
 
 void travelMonitor::printAllViruses() {

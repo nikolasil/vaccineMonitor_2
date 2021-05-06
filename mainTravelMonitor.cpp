@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <unistd.h>
 
 #include "travelMonitor.h"
 #include "util.h"

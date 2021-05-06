@@ -1,7 +1,7 @@
 CC = g++ -std=c++11
 CFLAFS = -g
 
-TRAVEL_MONITOR_FILES = mainTravelMonitor.o travelMonitor.o util.o monitorList.o fifoFDList.o bloomFilter.o stringList.o
+TRAVEL_MONITOR_FILES = mainTravelMonitor.o travelMonitor.o util.o monitorCountryPairList.o monitorList.o bloomFilter.o stringList.o
 MONITOR_FILES = mainMonitor.o monitor.o util.o stringList.o citizen.o tree.o bloomFilter.o date.o skipList.o
 
 all: clean travelMonitor Monitor
@@ -32,11 +32,11 @@ monitor.o:
 stringList.o:
 	$(CC) $(CFLAFS) -c DataStructures/stringList/stringList.cpp
 
+monitorCountryPairList.o:
+	$(CC) $(CFLAFS) -c DataStructures/monitorCountryPairList/monitorCountryPairList.cpp
+
 monitorList.o:
 	$(CC) $(CFLAFS) -c DataStructures/monitorList/monitorList.cpp
-
-fifoFDList.o:
-	$(CC) $(CFLAFS) -c DataStructures/fifoFDList/fifoFDList.cpp
 
 skipList.o:
 	$(CC) $(CFLAFS) -c DataStructures/skipList/skipList.cpp
@@ -55,7 +55,6 @@ date.o:
 
 util.o:
 	$(CC) $(CFLAFS) -c util.cpp
-
 
 .PHONY: clean
 clean:

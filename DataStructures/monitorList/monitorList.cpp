@@ -1,13 +1,13 @@
 #include <iostream>
-#include <string>
 
 #include "../../util.h"
 #include "monitorList.h"
 
+monitorList::monitorList() {}
 
-monitorList::monitorList() : country("") {}
-
-monitorList::monitorList(string d, int m) : country(d), monitor(m) {}
+monitorList::monitorList(int r, int w) : readFD(r), writeFD(w) {
+    this->next = NULL;
+}
 
 monitorList::~monitorList()
 {
@@ -15,34 +15,30 @@ monitorList::~monitorList()
         delete this->getNext();
 }
 
-monitorList* monitorList::add(string d, int m)
+monitorList* monitorList::add(int r, int w)
 {
-    monitorList* new_node = new monitorList(d, m);
+    monitorList* temp = this;
+    while (temp->getNext() != NULL)
+        temp = temp->getNext();
+
+    monitorList* new_node = new monitorList(r, w);
     checkNew(new_node);
-    new_node->setNext(this);
+    temp->setNext(new_node);
     return new_node;
 }
 
-monitorList* monitorList::search(string d)
-{
+int monitorList::getReadFifo(int m) {
     monitorList* temp = this;
-    while (temp != NULL)
-    {
-        if (temp->getCountry().compare(d) == 0)
-            return temp;
-
+    for (int i = 0;i < m;i++)
         temp = temp->getNext();
-    }
-    return temp;
+
+    return temp->getReadFD();
 }
 
-void monitorList::print()
-{
+int monitorList::getWriteFifo(int m) {
     monitorList* temp = this;
-    while (temp != NULL)
-    {
-        cout << temp->country << " is assinged to monitor " << temp->monitor << endl;;
+    for (int i = 0;i < m;i++)
         temp = temp->getNext();
-    }
-    cout << endl;
+
+    return temp->getWriteFD();
 }
