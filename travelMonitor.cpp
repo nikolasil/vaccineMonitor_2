@@ -105,10 +105,10 @@ void travelMonitor::sendCountries() {
     else {
         for (int i = 0;i < count;i++) {
             string country = coutriesDir[i]->d_name;
-            cout << country << "->" << monitor << endl;
             if (country.compare("..") == 0 || country.compare(".") == 0)
                 continue;
 
+            cout << country << "->" << monitor << endl;
             this->addCountryToMonitor(country, monitor);
 
             sendStr(monitor, country);
