@@ -265,32 +265,29 @@ void Monitor::sendBlooms() {
     if (write(writeFD, &end, sizeof(int)) == -1)
         cout << "Error in writting end with errno=" << errno << endl;
 
-
-
-
     temp = this->viruses;
-    // send all the bits that are 1 for every virus
-    temp = this->viruses;
-    bloomFilter* bloomV = this->blooms->getBloom(temp);
-    while (1) {
+    while (temp != NULL) {
+        bloomFilter* bloomV = this->blooms->getBloom(temp);
         sendStr(temp->getString());
-        cout << "Monitor " << this->id << " send bloom of virus " << temp->getString() << ":";
-        this->blooms->getBloom(temp)->print();
-        for (int i = 0;i < bloomV->getSize();i++) {
-            if (bloomV->getBit(i) == 1)
-                if (write(writeFD, &i, sizeof(int)) == -1)
-                    cout << "Error in writting i with errno=" << errno << endl;
+        int pos = 0;
+        char* bloomArray = bloomV->getArray();
+
+        for (int i = 0;i <= this->bloomSize / this->bufferSize;i++) {
+            if (write(writeFD, &bloomArray[pos], bufferSize) == -1)
+                cout << "Error in writting i with errno=" << errno << endl;
+            pos += this->bufferSize;
         }
 
-        int end = -1;
-        if (write(writeFD, &end, sizeof(int)) == -1)
-            cout << "Error in writting end with errno=" << errno << endl;
-
         temp = temp->getNext();
-        if (temp == NULL)
-            sendStr("END BLOOMS");
-        bloomV = this->blooms->getBloom(temp);
     }
+
+    sendStr("END BLOOMS");
+    receiveDone();
+}
+
+void Monitor::receiveDone()
+{
+    cout << this->id << " " << receiveStr() << endl;
 }
 
 void Monitor::addNewVirus(string virusName)

@@ -5,9 +5,13 @@
 
 
 
-stringList::stringList() : data("") {}
+stringList::stringList() : data("") {
+    this->next == NULL;
+}
 
-stringList::stringList(string d) : data(d) {}
+stringList::stringList(string d) : data(d) {
+    this->next == NULL;
+}
 
 stringList::~stringList()
 {

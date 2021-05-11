@@ -20,5 +20,6 @@ int main(int argc, char* argv[])
     monitor.receiveCountries();
     monitor.readFilesAndCreateStructures();
     monitor.sendBlooms();
+
     return 0;
 }

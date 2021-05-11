@@ -21,6 +21,7 @@ public:
     void receiveCountries();
     void readFilesAndCreateStructures();
     void sendBlooms();
+    void receiveDone();
 
     void addFromFile(string filePath);
     void addRecord(int length, string* words, string line);

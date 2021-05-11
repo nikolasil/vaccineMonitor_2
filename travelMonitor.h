@@ -21,6 +21,7 @@ public:
     void sendCredentials();
     void sendCountries();
     void receiveBlooms();
+    void sendDone();
     void startMenu();
 
     void sendStr(int monitor, string str);

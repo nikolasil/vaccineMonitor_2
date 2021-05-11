@@ -146,8 +146,10 @@ void travelMonitor::receiveBlooms() {
             if (FD_ISSET(this->monitors->getReadFifo(i), &fileDecriptorSet)) {
                 cout << "Monitor" << i << " is ready!" << endl;
                 int end = 0;
-                while (end != -1) {
+                while (1) {
                     string virus = receiveManyStr(i, &end);
+                    if (end == -1 || virus == "")
+                        break;
                     addNewVirus(virus);
                     cout << "Got virus=" << virus << " from Monitor " << i << endl;
                 }
@@ -160,15 +162,19 @@ void travelMonitor::receiveBlooms() {
                         cout << "Done updating blooms" << endl;
                         break;
                     }
-                    int bit;
-                    int fd = this->monitors->getReadFifo(i);
-                    while (1) {
 
-                        if (read(fd, &bit, sizeof(int)) == -1)
+                    int pos = 0;
+                    int fd = this->monitors->getReadFifo(i);
+                    char* bloomArray = this->blooms->getBloom(this->viruses->search(virus))->getArray();
+                    for (int i = 0;i <= this->sizeOfBloom / this->bufferSize;i++) {
+                        char buff[this->bufferSize];
+                        if (read(fd, &buff, this->bufferSize) == -1)
                             cout << "Error in reading bit with errno=" << errno << endl;
-                        if (bit == -1)
-                            break;
-                        this->blooms->getBloom(this->viruses->search(virus))->setBit(bit, 1);
+
+                        for (int i = 0; i < this->bufferSize;i++)
+                            bloomArray[pos + i] = bloomArray[pos + i] | buff[i];
+
+                        pos += this->bufferSize;
                     }
                     cout << virus << " ";
                     this->blooms->getBloom(this->viruses->search(virus))->print();
@@ -181,6 +187,13 @@ void travelMonitor::receiveBlooms() {
             }
         }
     }
+
+    sendDone();
+}
+
+void travelMonitor::sendDone() {
+    for (int i = 0;i < numMonitors;i++)
+        sendStr(i, "DONE");
 }
 
 void travelMonitor::startMenu() {

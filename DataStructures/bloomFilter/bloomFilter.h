@@ -22,7 +22,7 @@ public:
     int getSize() { return this->bloomSize * sizeof(char) * 8; }
     void add(int number);
     int check(int number);
-
+    char* getArray() { return this->array; };
     void print();
 private:
     unsigned long djb2(unsigned char* str);

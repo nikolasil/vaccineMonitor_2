@@ -23,5 +23,6 @@ int main(int argc, char* argv[])
     mainMonitor.sendCredentials();
     mainMonitor.sendCountries();
     mainMonitor.receiveBlooms();
+
     return 0;
 }
