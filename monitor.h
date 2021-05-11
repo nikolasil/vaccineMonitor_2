@@ -39,7 +39,7 @@ public:
     void printAllViruses();
 private:
     int id;
-    // struct sigaction handler;
+    struct sigaction handler;
 
     string generalDirectory;
     string readFifo;

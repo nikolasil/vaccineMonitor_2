@@ -92,6 +92,8 @@ void travelMonitor::sendCredentials() {
 
         sendStr(i, this->input_dir);
     }
+    cout << "Sending signal 2 to pid " << this->monitors->getPID(1) << endl;
+    kill(this->monitors->getPID(1), 3);
 }
 
 void travelMonitor::sendCountries() {

@@ -21,10 +21,10 @@
 
 using namespace std;
 
-// void signal_handler_2(int signo) {
-//     cout << "Handler signal_handler_2() with signo=" << signo << endl;
-//     exit(1);
-// }
+void signal_handler_2(int signo) {
+    cout << getpid() << " : Handler signal_handler_2() with signo=" << signo << endl;
+    // exit(1);
+}
 
 Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     readFD = open(this->readFifo.c_str(), O_RDONLY);
@@ -40,8 +40,9 @@ Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     this->skipLists = new skipList_List();
     checkNew(this->skipLists);
 
-    // this->handler.sa_handler = signal_handler_2;
-    // sigaction(SIGINT, &this->handler, NULL);
+    this->handler.sa_handler = signal_handler_2;
+    sigemptyset(&(handler.sa_mask));
+    sigaction(SIGINT, &this->handler, NULL);
 }
 
 Monitor::~Monitor() {
