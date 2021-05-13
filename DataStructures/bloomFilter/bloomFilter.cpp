@@ -71,7 +71,7 @@ unsigned long bloomFilter::hash_i(unsigned char* str, int i)
 void bloomFilter::add(int number)
 {
     char numberstring[4];
-    snprintf(numberstring, 4, "%d", number);
+    snprintf(numberstring, 5, "%d", number);
     unsigned char unsignedNumber[4];
     unsignedNumber[0] = numberstring[0];
     unsignedNumber[1] = numberstring[1];
