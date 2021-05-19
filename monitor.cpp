@@ -41,6 +41,13 @@ void Monitor::waitForSignals() {
     cout << "Done for singlas" << endl;
 }
 
+void Monitor::waitForCommands() {
+    while (1) {
+        string str = receiveStr();
+        cout << "Monitor " << this->id << " got command " << str << endl;
+    }
+}
+
 Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     readFD = open(this->readFifo.c_str(), O_RDONLY);
     writeFD = open(this->writeFifo.c_str(), O_WRONLY);
@@ -59,10 +66,10 @@ Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     checkNew(this->skipLists);
 
 
-    this->handler.sa_handler = signal_handler;
-    sigemptyset(&(handler.sa_mask));
-    sigaction(SIGINT, &this->handler, NULL);
-    sigaction(SIGUSR1, &this->handler, NULL);
+    // this->handler.sa_handler = signal_handler;
+    // sigemptyset(&(handler.sa_mask));
+    // sigaction(SIGINT, &this->handler, NULL);
+    // sigaction(SIGUSR1, &this->handler, NULL);
 }
 
 Monitor::~Monitor() {
@@ -89,7 +96,8 @@ void Monitor::receiveCountries() {
     int end = 0;
     while (end != -1) {
         string country = receiveManyStr(&end);
-        this->addNewCountry(country);
+        if (country != "")
+            this->addNewCountry(country);
         cout << "Monitor " << this->id << " got country=" << country << endl;
     }
 }
@@ -347,12 +355,18 @@ void Monitor::sendStr(string str) {
     if (write(writeFD, &sizeOfStr, sizeof(int)) == -1)
         cout << "Error in writting sizeOfStr with errno=" << errno << endl;
 
-    int pos = 0;
-    for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
-        if (write(writeFD, &to_tranfer[pos], this->bufferSize) == -1)
-            cout << "Error in writting to_tranfer with errno=" << errno << endl;
-        pos += this->bufferSize;
+    if (sizeOfStr > this->bufferSize) {
+        int pos = 0;
+        for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
+            if (write(writeFD, &to_tranfer[pos], this->bufferSize) == -1)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+            pos += this->bufferSize;
+        }
     }
+    else
+        if (write(writeFD, &to_tranfer[0], sizeOfStr) == -1)
+            cout << "Error in writting to_tranfer with errno=" << errno << endl;
+
 }
 
 string Monitor::receiveStr() {
@@ -361,11 +375,20 @@ string Monitor::receiveStr() {
         cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
 
     string str = "";
-    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
-        char buff[this->bufferSize];
-        if (read(readFD, &buff, this->bufferSize) == -1)
+    if (sizeOfStr > this->bufferSize) {
+        for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+            char buff[this->bufferSize + 1];
+            if (read(readFD, &buff[0], this->bufferSize) == -1)
+                cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+            buff[this->bufferSize] = '\0';
+            str.append(buff);
+        }
+    }
+    else {
+        char buff[sizeOfStr + 1];
+        if (read(readFD, &buff[0], sizeOfStr) == -1)
             cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
-        buff[this->bufferSize] = '\0';
+        buff[sizeOfStr] = '\0';
         str.append(buff);
     }
     return str;
@@ -382,22 +405,32 @@ string Monitor::receiveManyStr(int* end) {
     }
 
     string str = "";
-    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
-        char buff[this->bufferSize];
-        if (read(readFD, &buff, this->bufferSize) == -1)
+    if (sizeOfStr > this->bufferSize) {
+        for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+            char buff[this->bufferSize + 1];
+            if (read(readFD, &buff[0], this->bufferSize) == -1)
+                cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+            buff[this->bufferSize] = '\0';
+            str.append(buff);
+        }
+    }
+    else {
+        char buff[sizeOfStr + 1];
+        if (read(readFD, &buff[0], sizeOfStr) == -1)
             cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
-        buff[this->bufferSize] = '\0';
+        buff[sizeOfStr] = '\0';
+        cout << "test " << buff << endl;
         str.append(buff);
     }
     return str;
 }
 
 void Monitor::printAllCountries() {
-    cout << "Monitor " << this->id << " has the countries" << endl;
+    cout << "Monitor " << this->id << " has the countries:";
     this->countries->print();
 }
 
 void Monitor::printAllViruses() {
-    cout << "Monitor " << this->id << " has the viruses" << endl;
+    cout << "Monitor " << this->id << " has the viruses:";
     this->viruses->print();
 }

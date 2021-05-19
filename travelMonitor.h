@@ -25,8 +25,15 @@ public:
     void sendDone();
     void startMenu();
 
+    void travelRequest(string* command, int length);
+    void travelStats(string* command, int length);
+    void addVaccinationRecords(string* command, int length);
+    void searchVaccinationStatus(string* command, int length);
+    void terminate();
+
     void sendSIGUSR1(int monitor);
     void sendSIGINT(int monitor);
+
     void sendStr(int monitor, string str);
     string receiveStr(int monitor);
     string receiveManyStr(int monitor, int* end);

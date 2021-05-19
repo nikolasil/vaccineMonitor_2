@@ -23,9 +23,8 @@ int main(int argc, char* argv[])
     mainMonitor.sendCredentials();
     mainMonitor.sendCountries();
     mainMonitor.receiveBlooms();
-    cout << "Sending singlas" << endl;
-    sleep(2);
-    mainMonitor.sendSIGINT(0);
-    sleep(3);
+    mainMonitor.printAllViruses();
+    mainMonitor.startMenu();
+    // sleep(2);
     return 0;
 }

@@ -23,6 +23,10 @@ void date::print()
     cout << this->day << "-" << this->month << "-" << this->year;
 }
 
+string date::getConcatenate() {
+    return this->day + "-" + this->month + "-" + this->year;
+}
+
 int date::compare(date d)
 {
     string a;

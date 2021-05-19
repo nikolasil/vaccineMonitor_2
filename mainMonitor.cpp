@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <unistd.h>
 
 using namespace std;
 
@@ -19,8 +20,8 @@ int main(int argc, char* argv[])
     monitor.receiveCredentials();
     monitor.receiveCountries();
     monitor.readFilesAndCreateStructures();
+    monitor.printAllCountries();
     monitor.sendBlooms();
-    monitor.waitForSignals();
-
+    monitor.waitForCommands();
     return 0;
 }

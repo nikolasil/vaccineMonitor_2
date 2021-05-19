@@ -20,6 +20,7 @@ public:
     void print();
     int compare(date d);
     bool isValid(); // return true if the date is in correct format (dd-mm-yyyy)
+    string getConcatenate();
 
     // GETTERS
     string getDay() { return this->day; }

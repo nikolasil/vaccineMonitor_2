@@ -40,6 +40,7 @@ public:
     void printAllViruses();
 
     void waitForSignals();
+    void waitForCommands();
 private:
     int id;
     struct sigaction handler;

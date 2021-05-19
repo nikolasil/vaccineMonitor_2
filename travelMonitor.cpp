@@ -9,16 +9,19 @@
 #include <string>
 #include <typeinfo>
 #include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "travelMonitor.h" 
 #include "util.h" 
 #include "DataStructures/bloomFilter/bloomFilter.h"
+#include "DataStructures/date/date.h"
 
 void signal_handler(int signo) {
     cout << "TravelMonitor Signal Handler with signo= " << signo << endl;
     if (signo == 2 || signo == 3) { // SIGINT || SIGQUIT
         cout << "SIGINT || SIGQUIT" << endl;
-        // exit(1);
+        exit(1);
     }
     else if (signo == 20 || signo == 17 || signo == 18) { // SIGCHLD
         cout << "SIGCHLD" << endl;
@@ -45,10 +48,10 @@ travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), 
     this->blooms = new bloomFilterList(this->sizeOfBloom);
     checkNew(this->blooms);
 
-    this->handler.sa_handler = signal_handler;
-    sigemptyset(&(handler.sa_mask));
-    sigaction(SIGCHLD, &this->handler, NULL);
-    sigaction(SIGINT, &this->handler, NULL);
+    // this->handler.sa_handler = signal_handler;
+    // sigemptyset(&(handler.sa_mask));
+    // sigaction(SIGCHLD, &this->handler, NULL);
+    // sigaction(SIGINT, &this->handler, NULL);
 }
 
 void travelMonitor::createFIFOs() {
@@ -139,6 +142,7 @@ void travelMonitor::sendCountries() {
             cout << country << "->" << monitor << endl;
             this->addCountryToMonitor(country, monitor);
 
+            cout << "Sending to monitor " << monitor << " the country " << country << endl;
             sendStr(monitor, country);
 
             monitor++;
@@ -225,8 +229,137 @@ void travelMonitor::sendDone() {
 }
 
 void travelMonitor::startMenu() {
-    cout << "Menu Started" << endl;
-    cout << "Menu Ended" << endl;
+    do
+    {
+        cout << endl;
+        cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
+        cout << "Available commands" << endl;
+        cout << "   /travelRequest citizenID date countryFrom countryTo virusName" << endl;
+        cout << "   /travelStats virusName date1 date2 [country]" << endl;
+        cout << "   /addVaccinationRecords country" << endl;
+        cout << "   /searchVaccinationStatus citizenID" << endl;
+        cout << "   /exit" << endl;
+        cout << endl;
+        string input = getInput("Enter command: ");
+        int length;
+        string* command = readString(input, &length);
+        if (length > 0)
+        {
+            if (command[0].compare("/travelRequest") == 0)
+                this->travelRequest(command, length);
+
+            else if (command[0].compare("/travelStats") == 0)
+                this->travelStats(command, length);
+
+            else if (command[0].compare("/addVaccinationRecords") == 0)
+                this->addVaccinationRecords(command, length);
+
+            else if (command[0].compare("/searchVaccinationStatus") == 0)
+                this->searchVaccinationStatus(command, length);
+
+            else if (command[0].compare("/exit") == 0)
+            {
+                this->terminate();
+                delete[] command;
+                break;
+            }
+            else
+                cout << "Invalid command!" << endl;
+        }
+        delete[] command;
+    } while (1);
+}
+
+
+void travelMonitor::travelRequest(string* arguments, int length) {
+    cout << endl;
+    cout << "- Selected: /travelRequest" << endl;
+    if (length == 6)
+    {
+        int id;
+        if (arguments[1].find_first_not_of("0123456789") != -1)
+        {
+            cout << "ERROR citizenID must be given as first argument && it must be a 4 digit integer" << endl;
+            return;
+        }
+        else if (stoi(arguments[1]) > 9999 && stoi(arguments[1]) <= 0)
+        {
+            cout << "ERROR citizenID must be given as first argument && it must be a 4 digit integer" << endl;
+            return;
+        }
+        id = stoi(arguments[1]);
+        date checkDate = date((arguments[2]));
+        if (!checkDate.isValid()) {
+            cout << "ERROR date must be given as second argument && it must be in in correct format (dd-mm-yyyy)" << endl;
+            return;
+        }
+        string countryFrom = arguments[3];
+        string countryTo = arguments[4];
+        string virusName = arguments[5];
+
+        cout << "- citizenID: " << id << endl;
+        cout << "- date: ";
+        checkDate.print();
+        cout << endl;
+        cout << "- countryFrom: " << countryFrom << endl;
+        cout << "- countryTo: " << countryTo << endl;
+        cout << "- virusName: " << virusName << endl;
+        cout << endl;
+
+        int res;
+        stringList* v = this->viruses->search(virusName);
+        if (v != NULL)
+            res = this->blooms->getBloom(v)->check(id);
+        else
+        {
+            cout << "REQUEST REJECTED – YOU ARE NOT VACCINATED" << endl;
+            return;
+        }
+
+        if (res)
+        {
+            string s = "/travelRequest ";
+            s.append(to_string(id) + " ");
+            s.append(checkDate.getConcatenate() + " ");
+            s.append(countryFrom + " ");
+            s.append(countryTo + " ");
+            s.append(virusName);
+            if (countryToMonitor->search(countryFrom) != NULL) {
+                sendStr(countryToMonitor->search(countryFrom)->getMonitor(), s);
+            }
+            else {
+                cout << "countryFrom " << countryFrom << " dont exists" << endl;
+            }
+            return;
+        }
+        else
+        {
+            cout << "REQUEST REJECTED – YOU ARE NOT VACCINATED" << endl;
+            return;
+        }
+    }
+    else
+    {
+        cout << "ERROR 5 Arguments must be given" << endl;
+        cout << "ERROR Total arguments given was: " << length - 1 << endl;
+        return;
+    }
+}
+
+void travelMonitor::travelStats(string* arguments, int length) {
+
+}
+
+void travelMonitor::addVaccinationRecords(string* arguments, int length) {
+
+}
+
+void travelMonitor::searchVaccinationStatus(string* arguments, int length) {
+
+}
+
+void travelMonitor::terminate() {
+
 }
 
 void travelMonitor::sendStr(int monitor, string str) {
@@ -237,13 +370,19 @@ void travelMonitor::sendStr(int monitor, string str) {
     if (write(fd, &sizeOfStr, sizeof(int)) == -1)
         cout << "Error in writting sizeOfStr with errno=" << errno << endl;
 
-    int pos = 0;
-    for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
-        if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
+    if (sizeOfStr > this->bufferSize) {
+        int pos = 0;
+        for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
+            if (write(fd, &to_tranfer[pos], this->bufferSize) == -1)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+
+            pos += this->bufferSize;
+        }
+    }
+    else
+        if (write(fd, &to_tranfer[0], sizeOfStr) == -1)
             cout << "Error in writting to_tranfer with errno=" << errno << endl;
 
-        pos += this->bufferSize;
-    }
 }
 
 string travelMonitor::receiveStr(int monitor) {
@@ -253,11 +392,20 @@ string travelMonitor::receiveStr(int monitor) {
         cout << "Error in reading sizeOfStr with errno=" << errno << endl;
 
     string str = "";
-    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
-        char buff[this->bufferSize];
-        if (read(fd, &buff, this->bufferSize) == -1)
+    if (sizeOfStr > this->bufferSize) {
+        for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+            char buff[this->bufferSize + 1];
+            if (read(fd, &buff[0], this->bufferSize) == -1)
+                cout << "Error in reading buff with errno=" << errno << endl;
+            buff[this->bufferSize] = '\0';
+            str.append(buff);
+        }
+    }
+    else {
+        char buff[sizeOfStr + 1];
+        if (read(fd, &buff[0], sizeOfStr) == -1)
             cout << "Error in reading buff with errno=" << errno << endl;
-        buff[this->bufferSize] = '\0';
+        buff[sizeOfStr] = '\0';
         str.append(buff);
     }
     return str;
@@ -275,11 +423,20 @@ string travelMonitor::receiveManyStr(int monitor, int* end) {
     }
 
     string str = "";
-    for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
-        char buff[this->bufferSize];
-        if (read(fd, &buff, this->bufferSize) == -1)
+    if (sizeOfStr > this->bufferSize) {
+        for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
+            char buff[this->bufferSize + 1];
+            if (read(fd, &buff[0], this->bufferSize) == -1)
+                cout << "Error in reading buff with errno=" << errno << endl;
+            buff[this->bufferSize] = '\0';
+            str.append(buff);
+        }
+    }
+    else {
+        char buff[sizeOfStr + 1];
+        if (read(fd, &buff[0], sizeOfStr) == -1)
             cout << "Error in reading buff with errno=" << errno << endl;
-        buff[this->bufferSize] = '\0';
+        buff[sizeOfStr] = '\0';
         str.append(buff);
     }
     return str;
@@ -313,8 +470,9 @@ void travelMonitor::addFdToMonitor(int m, int r, int w) {
 }
 
 void travelMonitor::printAllViruses() {
-    cout << "ALL THE viruses" << endl;
+    cout << "ALL THE viruses: ";
     this->viruses->print();
+    cout << endl;
 }
 
 void travelMonitor::printCountryToMonitor() {
