@@ -21,9 +21,24 @@
 
 using namespace std;
 
-void signal_handler_2(int signo) {
-    cout << getpid() << " : Handler signal_handler_2() with signo=" << signo << endl;
-    // exit(1);
+void signal_handler(int signo) {
+    cout << "Monitor " << getpid() << " Signal Handler with signo = " << signo << endl;
+    if (signo == 2 || signo == 3) { // SIGINT || SIGQUIT
+        cout << "SIGINT || SIGQUIT" << endl;
+        exit(1);
+    }
+    else if (signo == 30 || signo == 10 || signo == 16) { // SIGUSR1
+        cout << "SIGUSR1" << endl;
+    }
+    else {
+        cout << "Error signal not supposed to be in sigaction" << endl;
+    }
+}
+
+void Monitor::waitForSignals() {
+    cout << "Waiting for singlas" << endl;
+    sleep(5);
+    cout << "Done for singlas" << endl;
 }
 
 Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
@@ -37,12 +52,17 @@ Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     this->viruses = new stringList();
     checkNew(this->viruses);
 
+    this->filesReaded = new stringList();
+    checkNew(this->filesReaded);
+
     this->skipLists = new skipList_List();
     checkNew(this->skipLists);
 
-    this->handler.sa_handler = signal_handler_2;
+
+    this->handler.sa_handler = signal_handler;
     sigemptyset(&(handler.sa_mask));
     sigaction(SIGINT, &this->handler, NULL);
+    sigaction(SIGUSR1, &this->handler, NULL);
 }
 
 Monitor::~Monitor() {
@@ -97,7 +117,8 @@ void Monitor::readFilesAndCreateStructures() {
                 string fullpath = in;
                 fullpath.append("/");
                 fullpath.append(FILE);
-                this->addFromFile(fullpath);
+                if (this->addNewFile(fullpath))
+                    this->addFromFile(fullpath);
             }
         }
         country = country->getNext();
@@ -307,6 +328,16 @@ void Monitor::addNewCountry(string countryName)
     {
         this->countries = this->countries->add(countryName);
     }
+}
+
+int Monitor::addNewFile(string file)
+{
+    if (this->filesReaded->search(file) == NULL) // if we dont have that country add it to the list of Countries
+    {
+        this->filesReaded = this->filesReaded->add(file);
+        return 1;
+    }
+    return 0;
 }
 
 void Monitor::sendStr(string str) {

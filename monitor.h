@@ -28,6 +28,7 @@ public:
     // void signal_handler_2(int signo);
     void addNewVirus(string virusName);
     void addNewCountry(string countryName);
+    int addNewFile(string file);
 
     int checkSyntaxRecord(string errorMessage, int length, string* words, string input);
 
@@ -37,6 +38,8 @@ public:
 
     void printAllCountries();
     void printAllViruses();
+
+    void waitForSignals();
 private:
     int id;
     struct sigaction handler;
@@ -55,6 +58,7 @@ private:
     skipList_List* skipLists;
     stringList* viruses;
     stringList* countries;
+    stringList* filesReaded;
 };
 
 #endif

@@ -14,13 +14,41 @@
 #include "util.h" 
 #include "DataStructures/bloomFilter/bloomFilter.h"
 
+void signal_handler(int signo) {
+    cout << "TravelMonitor Signal Handler with signo= " << signo << endl;
+    if (signo == 2 || signo == 3) { // SIGINT || SIGQUIT
+        cout << "SIGINT || SIGQUIT" << endl;
+        // exit(1);
+    }
+    else if (signo == 20 || signo == 17 || signo == 18) { // SIGCHLD
+        cout << "SIGCHLD" << endl;
+    }
+    else {
+        cout << "Error signal not supposed to be in sigaction" << endl;
+    }
+}
+
+void travelMonitor::sendSIGUSR1(int monitor) {
+    kill(this->monitors->getPID(monitor), SIGUSR1);
+}
+
+void travelMonitor::sendSIGINT(int monitor) {
+    kill(this->monitors->getPID(monitor), SIGINT);
+}
+
 travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
     cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
     this->countryToMonitor = NULL;
     this->monitors = NULL;
     this->viruses = new stringList();
+    checkNew(this->viruses);
     this->blooms = new bloomFilterList(this->sizeOfBloom);
     checkNew(this->blooms);
+
+    this->handler.sa_handler = signal_handler;
+    sigemptyset(&(handler.sa_mask));
+    sigaction(SIGCHLD, &this->handler, NULL);
+    sigaction(SIGINT, &this->handler, NULL);
 }
 
 void travelMonitor::createFIFOs() {
@@ -92,8 +120,6 @@ void travelMonitor::sendCredentials() {
 
         sendStr(i, this->input_dir);
     }
-    // cout << "Sending signal 2 to pid " << this->monitors->getPID(1) << endl;
-    // kill(this->monitors->getPID(1), 3);
 }
 
 void travelMonitor::sendCountries() {

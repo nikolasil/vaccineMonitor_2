@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <signal.h>
 
 #include "DataStructures/monitorCountryPairList/monitorCountryPairList.h"
 #include "DataStructures/bloomFilter/bloomFilter.h"
@@ -24,6 +25,8 @@ public:
     void sendDone();
     void startMenu();
 
+    void sendSIGUSR1(int monitor);
+    void sendSIGINT(int monitor);
     void sendStr(int monitor, string str);
     string receiveStr(int monitor);
     string receiveManyStr(int monitor, int* end);
@@ -39,6 +42,8 @@ public:
 
     void printCountryToMonitor();
 private:
+    struct sigaction handler;
+
     int numMonitors;
     int bufferSize;
     int sizeOfBloom;
