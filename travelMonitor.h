@@ -26,6 +26,7 @@ public:
     void sendCredentials();
     void sendCountries();
     void receiveBlooms();
+    void receiveBlooms(int monitor);
     void sendDone();
     void startMenu();
 
@@ -57,7 +58,8 @@ public:
 
     void printCountryToMonitor();
 private:
-    struct sigaction handler;
+    struct sigaction handlerSIGINT_SIGQUIT;
+    struct sigaction handlerSIGCHLD;
     string* command;
     int numMonitors;
     int bufferSize;

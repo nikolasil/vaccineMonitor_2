@@ -116,6 +116,8 @@ string getInput(string prompt)
 {
     string value;
     cout << prompt;
+    cin.seekg(0, ios::end);
+    cin.clear();
     getline(cin, value);
     return value;
 }

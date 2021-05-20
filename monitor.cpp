@@ -23,17 +23,15 @@ using namespace std;
 
 Monitor monitor = Monitor();
 
-void signal_handler(int signo) {
-    cout << "Monitor " << getpid() << " Signal Handler with signo = " << signo << endl;
-    if (signo == 2 || signo == 3) { // SIGINT || SIGQUIT
-        exit(1);
-    }
-    else if (signo == 30 || signo == 10 || signo == 16) { // SIGUSR1
-        monitor.printAllViruses();
-    }
-    else if (signo == 15) { // SIGTERM
-        monitor.suicide();
-    }
+void signal_handler_SIGINT_SIGQUIT(int signo) {
+    cout << "signal_handler_SIGINT_SIGQUIT" << endl;
+    monitor.makeLogFile();
+    monitor.suicide();
+}
+void signal_handler_SIGUSR1(int signo) {
+    cout << "signal_handler_SIGUSR1" << endl;
+    monitor.readFilesAndCreateStructures();
+    // monitor.sendBlooms();
 }
 
 void Monitor::waitForSignals() {
@@ -56,10 +54,10 @@ void Monitor::suicide() {
     if (this->filesReaded != NULL)
         delete this->filesReaded;
     if (this->command != NULL)
-        delete this->command;
+        delete[] this->command;
 
-    int pid = getpid();
-    kill(pid, SIGKILL);
+    cout << "Monitor " << getpid() << " Terminated" << endl;
+    kill(getpid(), SIGKILL);
 }
 
 void Monitor::waitForCommands() {
@@ -139,34 +137,43 @@ void Monitor::makeLogFile() {
     logfile.close();
 }
 
-Monitor::Monitor() {}
+Monitor::Monitor() {
+    handlerSIGINT_SIGQUIT.sa_handler = signal_handler_SIGINT_SIGQUIT;
+    sigfillset(&(handlerSIGINT_SIGQUIT.sa_mask));
+    sigaction(SIGQUIT, &handlerSIGINT_SIGQUIT, NULL);
+    sigaction(SIGINT, &handlerSIGINT_SIGQUIT, NULL);
 
-Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
-    readFD = open(this->readFifo.c_str(), O_RDONLY);
-    writeFD = open(this->writeFifo.c_str(), O_WRONLY);
-
-    this->tree = NULL;
-    this->countries = new stringList();
-    checkNew(this->countries);
-
-    this->viruses = new stringList();
-    checkNew(this->viruses);
-
-    this->filesReaded = new stringList();
-    checkNew(this->filesReaded);
-
-    this->skipLists = new skipList_List();
-    checkNew(this->skipLists);
-
-    this->t = 0;
-    this->f = 0;
-
-    this->handler.sa_handler = signal_handler;
-    sigemptyset(&(handler.sa_mask));
-    sigaction(SIGINT, &this->handler, NULL);
-    sigaction(SIGUSR1, &this->handler, NULL);
-    sigaction(SIGTERM, &this->handler, NULL);
+    handlerSIGUSR1.sa_handler = signal_handler_SIGUSR1;
+    sigfillset(&(handlerSIGUSR1.sa_mask));
+    sigaction(SIGUSR1, &handlerSIGUSR1, NULL);
 }
+
+// Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
+//     readFD = open(this->readFifo.c_str(), O_RDONLY);
+//     writeFD = open(this->writeFifo.c_str(), O_WRONLY);
+
+//     this->tree = NULL;
+//     this->countries = new stringList();
+//     checkNew(this->countries);
+
+//     this->viruses = new stringList();
+//     checkNew(this->viruses);
+
+//     this->filesReaded = new stringList();
+//     checkNew(this->filesReaded);
+
+//     this->skipLists = new skipList_List();
+//     checkNew(this->skipLists);
+
+//     this->t = 0;
+//     this->f = 0;
+
+//     this->handler.sa_handler = signal_handler;
+//     sigemptyset(&(handler.sa_mask));
+//     sigaction(SIGINT, &this->handler, NULL);
+//     sigaction(SIGQUIT, &this->handler, NULL);
+//     sigaction(SIGUSR1, &this->handler, NULL);
+// }
 
 void Monitor::start(string r, string w) {
     this->readFifo = r;
@@ -189,11 +196,6 @@ void Monitor::start(string r, string w) {
 
     this->t = 0;
     this->f = 0;
-
-    this->handler.sa_handler = signal_handler;
-    sigemptyset(&(handler.sa_mask));
-    sigaction(SIGINT, &this->handler, NULL);
-    sigaction(SIGUSR1, &this->handler, NULL);
 }
 
 Monitor::~Monitor() {
@@ -249,8 +251,10 @@ void Monitor::readFilesAndCreateStructures() {
                 string fullpath = in;
                 fullpath.append("/");
                 fullpath.append(FILE);
-                if (this->addNewFile(fullpath))
+                if (this->addNewFile(fullpath)) {
+                    cout << "new file " << fullpath << endl;
                     this->addFromFile(fullpath);
+                }
             }
         }
         country = country->getNext();

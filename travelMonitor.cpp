@@ -11,43 +11,51 @@
 #include <cstring>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <signal.h>
 
 #include "travelMonitor.h" 
 #include "util.h" 
 #include "DataStructures/bloomFilter/bloomFilter.h"
 #include "DataStructures/date/date.h"
 
+using namespace std;
+
 travelMonitor mainMonitor = travelMonitor();
 
-void signal_handler(int signo) {
-    cout << "TravelMonitor Signal Handler with signo= " << signo << endl;
-    if (signo == 2 || signo == 3) { // SIGINT || SIGQUIT
-        mainMonitor.killAllMonitors();
-        mainMonitor.suicide();
-    }
-    else if (signo == 20 || signo == 17 || signo == 18) { // SIGCHLD
-    }
+void signal_handler_SIGINT_SIGQUIT(int signo) {
+    cout << "TravelMonitor signal_handler_SIGINT_SIGQUIT" << endl;
+    mainMonitor.killAllMonitors();
+    mainMonitor.suicide();
 }
 
+void signal_handler_SIGCHLD(int signo) {
+    cout << "TravelMonitor signal_handler_SIGCHLD" << endl;
+    pid_t pid;
+    int status;
+    cout << "Checking to see who died" << endl;
+    // while ((pid = waitpid(-1, &status, WNOHANG)) <= 0);
+    // cout << pid << " is dead" << endl;
+}
+
+
 void travelMonitor::suicide() {
-    if (this->viruses != NULL)
-        delete this->viruses;
     if (this->monitors != NULL)
         delete this->monitors;
     if (this->countryToMonitor != NULL)
         delete this->countryToMonitor;
     if (this->requests != NULL)
         delete this->requests;
-    if (this->countries != NULL)
-        delete this->countries;
     if (this->blooms != NULL)
         delete this->blooms;
+    if (this->viruses != NULL)
+        delete this->viruses;
+    if (this->countries != NULL)
+        delete this->countries;
     if (this->command != NULL)
-        delete this->command;
+        delete[] this->command;
 
-    int pid = getpid();
-    kill(pid, SIGKILL);
+    cout << "Travel Monitor Terminated" << endl;
+    kill(getpid(), SIGKILL);
 }
 
 void travelMonitor::sendSIGUSR1(int monitor) {
@@ -68,12 +76,21 @@ void travelMonitor::sendSIGTERM(int monitor) {
 
 void travelMonitor::killAllMonitors() {
     for (int i = 0;i < numMonitors;i++) {
-        cout << "KILL MONITOR " << i << endl;
-        sendSIGTERM(i);
+        cout << "Send SIGINT to monitor " << this->monitors->getPID(i) << endl;
+        sendSIGINT(i);
     }
 }
 
-travelMonitor::travelMonitor() {}
+travelMonitor::travelMonitor() {
+    handlerSIGINT_SIGQUIT.sa_handler = signal_handler_SIGINT_SIGQUIT;
+    sigfillset(&(handlerSIGINT_SIGQUIT.sa_mask));
+    sigaction(SIGQUIT, &handlerSIGINT_SIGQUIT, NULL);
+    sigaction(SIGINT, &handlerSIGINT_SIGQUIT, NULL);
+
+    handlerSIGCHLD.sa_handler = signal_handler_SIGCHLD;
+    sigfillset(&(handlerSIGCHLD.sa_mask));
+    sigaction(SIGCHLD, &handlerSIGCHLD, NULL);
+}
 
 void travelMonitor::start(int m, int b, int s, string dir) {
     this->numMonitors = m;
@@ -88,28 +105,23 @@ void travelMonitor::start(int m, int b, int s, string dir) {
 
     this->blooms = new bloomFilterList(this->sizeOfBloom);
     checkNew(this->blooms);
-
-    this->handler.sa_handler = signal_handler;
-    sigemptyset(&(handler.sa_mask));
-    // sigaction(SIGCHLD, &this->handler, NULL);
-    sigaction(SIGINT, &this->handler, NULL);
 }
 
-travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
-    cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
-    this->countryToMonitor = NULL;
-    this->requests = NULL;
-    this->monitors = NULL;
-    this->viruses = new stringList();
-    checkNew(this->viruses);
-    this->blooms = new bloomFilterList(this->sizeOfBloom);
-    checkNew(this->blooms);
+// travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
+    // cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
+    // this->countryToMonitor = NULL;
+    // this->requests = NULL;
+    // this->monitors = NULL;
+    // this->viruses = new stringList();
+    // checkNew(this->viruses);
+    // this->blooms = new bloomFilterList(this->sizeOfBloom);
+    // checkNew(this->blooms);
 
-    this->handler.sa_handler = signal_handler;
-    sigemptyset(&(handler.sa_mask));
+    // this->handler.sa_handler = signal_handler;
+    // sigemptyset(&(handler.sa_mask));
     // sigaction(SIGCHLD, &this->handler, NULL);
-    sigaction(SIGINT, &this->handler, NULL);
-}
+    // sigaction(SIGINT, &this->handler, NULL);
+// }
 
 void travelMonitor::createFIFOs() {
     string directory = "pipes/";
@@ -281,6 +293,10 @@ void travelMonitor::receiveBlooms() {
     sendDone();
 }
 
+void travelMonitor::receiveBlooms(int monitor) {
+
+}
+
 void travelMonitor::sendDone() {
     for (int i = 0;i < numMonitors;i++)
         sendStr(i, "DONE");
@@ -289,17 +305,9 @@ void travelMonitor::sendDone() {
 void travelMonitor::startMenu() {
     do
     {
-        cout << endl;
-        cout << "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -" << endl;
-        cout << "Available commands" << endl;
-        cout << "   /travelRequest citizenID date countryFrom countryTo virusName" << endl;
-        cout << "   /travelStats virusName date1 date2 [country]" << endl;
-        cout << "   /addVaccinationRecords country" << endl;
-        cout << "   /searchVaccinationStatus citizenID" << endl;
-        cout << "   /exit" << endl;
-        cout << endl;
-        int pid = getpid();
-        // kill(pid, SIGINT);
+        sleep(20);
+        int pid = this->monitors->getPID(1);
+        kill(pid, SIGUSR1);
         string input = getInput("Enter command: ");
         int length;
         this->command = readString(input, &length);
@@ -317,11 +325,8 @@ void travelMonitor::startMenu() {
             else if (command[0].compare("/searchVaccinationStatus") == 0)
                 this->searchVaccinationStatus(command, length);
 
-            else if (command[0].compare("/exit") == 0)
-            {
-                this->suicide();
-                delete[] command;
-                break;
+            else if (command[0].compare("/exit") == 0) {
+                kill(getpid(), SIGINT);
             }
             else
                 cout << "Invalid command!" << endl;

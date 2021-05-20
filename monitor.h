@@ -50,7 +50,8 @@ public:
     void waitForCommands();
 private:
     int id;
-    struct sigaction handler;
+    struct sigaction handlerSIGINT_SIGQUIT;
+    struct sigaction handlerSIGUSR1;
     string* command;
     int t;
     int f;
