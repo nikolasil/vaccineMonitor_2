@@ -1,5 +1,6 @@
 /input_dir
 /input_dir2
-/countries
 /pipes
+/countries
+/logfiles
 *.o
