@@ -8,6 +8,7 @@
 #include "DataStructures/monitorCountryPairList/monitorCountryPairList.h"
 #include "DataStructures/bloomFilter/bloomFilter.h"
 #include "DataStructures/stringList/stringList.h"
+#include "DataStructures/statsList/statsList.h"
 #include "DataStructures/monitorList/monitorList.h"
 
 using namespace std;
@@ -15,6 +16,9 @@ using namespace std;
 class travelMonitor {
 public:
     travelMonitor(int m, int b, int s, string dir);
+    travelMonitor();
+    // ~travelMonitor();
+    void start(int m, int b, int s, string dir);
 
     void createFIFOs();
     void createMonitors();
@@ -25,14 +29,17 @@ public:
     void sendDone();
     void startMenu();
 
-    void travelRequest(string* command, int length);
-    void travelStats(string* command, int length);
-    void addVaccinationRecords(string* command, int length);
-    void searchVaccinationStatus(string* command, int length);
-    void terminate();
+    void travelRequest(string* arguments, int length);
+    void travelStats(string* arguments, int length);
+    void addVaccinationRecords(string* arguments, int length);
+    void searchVaccinationStatus(string* arguments, int length);
 
+    void suicide();
     void sendSIGUSR1(int monitor);
     void sendSIGINT(int monitor);
+    void sendSIGKILL(int monitor);
+    void sendSIGTERM(int monitor);
+    void killAllMonitors();
 
     void sendStr(int monitor, string str);
     string receiveStr(int monitor);
@@ -42,6 +49,7 @@ public:
     void addMonitor(int pid, int id);
     void addFdToMonitor(int m, int r, int w);
 
+    void addRequest(string c, string v, date dt, bool s);
     void addNewVirus(string virusName);
     void addNewCountry(string countryName);
 
@@ -50,7 +58,7 @@ public:
     void printCountryToMonitor();
 private:
     struct sigaction handler;
-
+    string* command;
     int numMonitors;
     int bufferSize;
     int sizeOfBloom;
@@ -60,6 +68,7 @@ private:
     monitorCountryPairList* countryToMonitor;
 
     stringList* viruses;
+    statsList* requests;
     stringList* countries;
     bloomFilterList* blooms;
 };

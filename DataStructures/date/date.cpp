@@ -15,6 +15,7 @@ date::date(string d)
 {
     this->setAll(d);
 }
+date::date() {}
 
 date::~date() {}
 

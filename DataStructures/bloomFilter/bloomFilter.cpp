@@ -21,7 +21,8 @@ bloomFilter::bloomFilter(int bloomSize)
 
 bloomFilter::~bloomFilter()
 {
-    delete this->array;
+    if (this->array != NULL)
+        delete this->array;
 }
 
 void bloomFilter::setBit(int k, int value)

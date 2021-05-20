@@ -7,6 +7,7 @@ using namespace std;
 #include "monitor.h"
 #include "util.h"
 
+extern Monitor monitor;
 
 int main(int argc, char* argv[])
 {
@@ -16,7 +17,8 @@ int main(int argc, char* argv[])
     if (argc != 2)
         cout << "Arguments must be 2" << endl;
     // check if pipes exists !
-    Monitor monitor(pipe0, pipe1);
+    // Monitor monitor(pipe0, pipe1);
+    monitor.start(pipe0, pipe1);
     monitor.receiveCredentials();
     monitor.receiveCountries();
     monitor.readFilesAndCreateStructures();

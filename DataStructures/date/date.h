@@ -14,6 +14,7 @@ class date
 public:
     date(string dd, string mm, string yy);
     date(string d);
+    date();
     ~date();
 
     void setAll(string d);

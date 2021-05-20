@@ -21,17 +21,18 @@
 
 using namespace std;
 
+Monitor monitor = Monitor();
+
 void signal_handler(int signo) {
     cout << "Monitor " << getpid() << " Signal Handler with signo = " << signo << endl;
     if (signo == 2 || signo == 3) { // SIGINT || SIGQUIT
-        cout << "SIGINT || SIGQUIT" << endl;
         exit(1);
     }
     else if (signo == 30 || signo == 10 || signo == 16) { // SIGUSR1
-        cout << "SIGUSR1" << endl;
+        monitor.printAllViruses();
     }
-    else {
-        cout << "Error signal not supposed to be in sigaction" << endl;
+    else if (signo == 15) { // SIGTERM
+        monitor.suicide();
     }
 }
 
@@ -41,12 +42,104 @@ void Monitor::waitForSignals() {
     cout << "Done for singlas" << endl;
 }
 
+void Monitor::suicide() {
+    if (this->tree != NULL)
+        delete this->tree;
+    if (this->skipLists != NULL)
+        delete this->skipLists;
+    if (this->blooms != NULL)
+        delete this->blooms;
+    if (this->viruses != NULL)
+        delete this->viruses;
+    if (this->countries != NULL)
+        delete this->countries;
+    if (this->filesReaded != NULL)
+        delete this->filesReaded;
+    if (this->command != NULL)
+        delete this->command;
+
+    int pid = getpid();
+    kill(pid, SIGKILL);
+}
+
 void Monitor::waitForCommands() {
-    while (1) {
-        string str = receiveStr();
-        cout << "Monitor " << this->id << " got command " << str << endl;
+    do
+    {
+        string input = receiveStr();
+        int length;
+        this->command = readString(input, &length);
+        if (length > 0)
+        {
+            if (command[0].compare("/travelRequest") == 0)
+                this->travelRequest(command, length);
+
+            // else if (command[0].compare("/travelStats") == 0)
+            //     this->travelStats(command, length);
+
+            // else if (command[0].compare("/addVaccinationRecords") == 0)
+            //     this->addVaccinationRecords(command, length);
+
+            // else if (command[0].compare("/searchVaccinationStatus") == 0)
+            //     this->searchVaccinationStatus(command, length);
+
+            // else if (command[0].compare("/exit") == 0)
+            // {
+            //     this->terminate();
+            //     delete[] command;
+            //     break;
+            // }
+            else if (command[0].compare("break") != 0)
+                cout << "Invalid command!" << endl;
+        }
+        delete[] command;
+    } while (1);
+}
+
+void Monitor::travelRequest(string* arguments, int length) {
+    id = stoi(arguments[1]);
+    date checkDate = date((arguments[2]));
+    string countryFrom = arguments[3];
+    string countryTo = arguments[4];
+    string virusName = arguments[5];
+
+    stringList* v = this->viruses->search(virusName);
+    if (v != NULL)
+    {
+        skipList* l;
+        l = skipLists->getVaccinated(v);
+        skipListNode* n = l->search(id, 't');
+
+        if (n == NULL) {
+            sendStr("NO");
+            f++;
+        }
+        else {
+            sendStr("YES " + n->getCitizen()->getStatus()->getVirusDate(v).getConcatenate());
+            t++;
+        }
+    }
+    else {
+        sendStr("NO");
+        f++;
     }
 }
+
+void Monitor::makeLogFile() {
+    cout << getpid() << endl;
+    int pid = getpid();
+    ofstream logfile("logfiles/log_file." + to_string(pid));
+    stringList* temp = this->countries;
+    while (temp != NULL) {
+        logfile << temp->getString() << endl;
+        temp = temp->getNext();
+    }
+    logfile << "TOTAL TRAVEL REQUESTS " << this->t + this->f << endl;
+    logfile << "ACCEPTED " << this->t << endl;
+    logfile << "REJECTED " << this->f << endl;
+    logfile.close();
+}
+
+Monitor::Monitor() {}
 
 Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     readFD = open(this->readFifo.c_str(), O_RDONLY);
@@ -65,11 +158,42 @@ Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
     this->skipLists = new skipList_List();
     checkNew(this->skipLists);
 
+    this->t = 0;
+    this->f = 0;
 
-    // this->handler.sa_handler = signal_handler;
-    // sigemptyset(&(handler.sa_mask));
-    // sigaction(SIGINT, &this->handler, NULL);
-    // sigaction(SIGUSR1, &this->handler, NULL);
+    this->handler.sa_handler = signal_handler;
+    sigemptyset(&(handler.sa_mask));
+    sigaction(SIGINT, &this->handler, NULL);
+    sigaction(SIGUSR1, &this->handler, NULL);
+    sigaction(SIGTERM, &this->handler, NULL);
+}
+
+void Monitor::start(string r, string w) {
+    this->readFifo = r;
+    this->writeFifo = w;
+    readFD = open(this->readFifo.c_str(), O_RDONLY);
+    writeFD = open(this->writeFifo.c_str(), O_WRONLY);
+
+    this->tree = NULL;
+    this->countries = new stringList();
+    checkNew(this->countries);
+
+    this->viruses = new stringList();
+    checkNew(this->viruses);
+
+    this->filesReaded = new stringList();
+    checkNew(this->filesReaded);
+
+    this->skipLists = new skipList_List();
+    checkNew(this->skipLists);
+
+    this->t = 0;
+    this->f = 0;
+
+    this->handler.sa_handler = signal_handler;
+    sigemptyset(&(handler.sa_mask));
+    sigaction(SIGINT, &this->handler, NULL);
+    sigaction(SIGUSR1, &this->handler, NULL);
 }
 
 Monitor::~Monitor() {
@@ -353,33 +477,38 @@ void Monitor::sendStr(string str) {
     int sizeOfStr = strlen(to_tranfer);
 
     if (write(writeFD, &sizeOfStr, sizeof(int)) == -1)
-        cout << "Error in writting sizeOfStr with errno=" << errno << endl;
+        if (errno != 4)
+            cout << "Error in writting sizeOfStr with errno=" << errno << endl;
 
     if (sizeOfStr > this->bufferSize) {
         int pos = 0;
         for (int i = 0;i <= strlen(to_tranfer) / this->bufferSize;i++) {
             if (write(writeFD, &to_tranfer[pos], this->bufferSize) == -1)
-                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+                if (errno != 4)
+                    cout << "Error in writting to_tranfer with errno=" << errno << endl;
             pos += this->bufferSize;
         }
     }
     else
         if (write(writeFD, &to_tranfer[0], sizeOfStr) == -1)
-            cout << "Error in writting to_tranfer with errno=" << errno << endl;
+            if (errno != 4)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
 
 }
 
 string Monitor::receiveStr() {
     int sizeOfStr;
     if (read(readFD, &sizeOfStr, sizeof(int)) == -1)
-        cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
+        if (errno != 4)
+            cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
 
     string str = "";
     if (sizeOfStr > this->bufferSize) {
         for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
             char buff[this->bufferSize + 1];
             if (read(readFD, &buff[0], this->bufferSize) == -1)
-                cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+                if (errno != 4)
+                    cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
             buff[this->bufferSize] = '\0';
             str.append(buff);
         }
@@ -387,7 +516,8 @@ string Monitor::receiveStr() {
     else {
         char buff[sizeOfStr + 1];
         if (read(readFD, &buff[0], sizeOfStr) == -1)
-            cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+            if (errno != 4)
+                cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
         buff[sizeOfStr] = '\0';
         str.append(buff);
     }
@@ -397,7 +527,8 @@ string Monitor::receiveStr() {
 string Monitor::receiveManyStr(int* end) {
     int sizeOfStr;
     if (read(readFD, &sizeOfStr, sizeof(int)) == -1)
-        cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
+        if (errno != 4)
+            cout << "Monitor " << this->id << " error in reading sizeOfStr with errno=" << errno << endl;
 
     if (sizeOfStr == -1) {
         *end = -1;
@@ -409,7 +540,8 @@ string Monitor::receiveManyStr(int* end) {
         for (int i = 0;i <= sizeOfStr / this->bufferSize;i++) {
             char buff[this->bufferSize + 1];
             if (read(readFD, &buff[0], this->bufferSize) == -1)
-                cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+                if (errno != 4)
+                    cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
             buff[this->bufferSize] = '\0';
             str.append(buff);
         }
@@ -417,7 +549,8 @@ string Monitor::receiveManyStr(int* end) {
     else {
         char buff[sizeOfStr + 1];
         if (read(readFD, &buff[0], sizeOfStr) == -1)
-            cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
+            if (errno != 4)
+                cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
         buff[sizeOfStr] = '\0';
         cout << "test " << buff << endl;
         str.append(buff);

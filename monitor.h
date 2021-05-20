@@ -15,13 +15,18 @@ using namespace std;
 class Monitor {
 public:
     Monitor(string r, string w);
+    Monitor();
     ~Monitor();
+    void start(string r, string w);
 
     void receiveCredentials();
     void receiveCountries();
     void readFilesAndCreateStructures();
     void sendBlooms();
     void receiveDone();
+
+    void suicide();
+    void travelRequest(string* arguments, int length);
 
     void addFromFile(string filePath);
     void addRecord(int length, string* words, string line);
@@ -39,12 +44,16 @@ public:
     void printAllCountries();
     void printAllViruses();
 
+    void makeLogFile();
+
     void waitForSignals();
     void waitForCommands();
 private:
     int id;
     struct sigaction handler;
-
+    string* command;
+    int t;
+    int f;
     string generalDirectory;
     string readFifo;
     string writeFifo;

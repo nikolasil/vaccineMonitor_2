@@ -7,6 +7,8 @@
 
 using namespace std;
 
+extern travelMonitor mainMonitor;
+
 int main(int argc, char* argv[])
 {
     int numMonitors;
@@ -16,7 +18,8 @@ int main(int argc, char* argv[])
     if (!checkArguments(argc, argv, numMonitors, bufferSize, sizeOfBloom, input_dir))
         return 1;
 
-    travelMonitor mainMonitor = travelMonitor(numMonitors, bufferSize, sizeOfBloom, input_dir);
+    // travelMonitor mainMonitor = travelMonitor(numMonitors, bufferSize, sizeOfBloom, input_dir);
+    mainMonitor.start(numMonitors, bufferSize, sizeOfBloom, input_dir);
     mainMonitor.createFIFOs();
     mainMonitor.createMonitors();
     mainMonitor.openFifos();
