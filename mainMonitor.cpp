@@ -24,6 +24,8 @@ int main(int argc, char* argv[])
     monitor.readFilesAndCreateStructures();
     monitor.printAllCountries();
     monitor.sendBlooms();
-    monitor.waitForCommands();
+    while (1) {
+        monitor.waitForCommands();
+    }
     return 0;
 }

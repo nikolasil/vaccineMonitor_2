@@ -27,7 +27,8 @@ int main(int argc, char* argv[])
     mainMonitor.sendCountries();
     mainMonitor.receiveBlooms();
     mainMonitor.printAllViruses();
-    mainMonitor.startMenu();
-    // sleep(2);
+    while (1) {
+        mainMonitor.startMenu();
+    }
     return 0;
 }

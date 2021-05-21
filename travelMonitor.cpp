@@ -32,9 +32,37 @@ void signal_handler_SIGCHLD(int signo) {
     cout << "TravelMonitor signal_handler_SIGCHLD" << endl;
     pid_t pid;
     int status;
-    cout << "Checking to see who died" << endl;
-    // while ((pid = waitpid(-1, &status, WNOHANG)) <= 0);
-    // cout << pid << " is dead" << endl;
+    cout << "Checking to see who terminated" << endl;
+    while ((pid = waitpid(-1, &status, WNOHANG)) <= 0);
+    if (status > 0) {
+        cout << pid << " is terminated" << endl;
+        int id = mainMonitor.getMonitors()->getID(pid);
+        cout << "The id was " << id << endl;
+        mainMonitor.createMonitor(id);
+        mainMonitor.openFifo(id);
+        // cout << "line:43" << endl;
+        mainMonitor.sendCredential(id);
+        // cout << "line:45" << endl;
+        monitorCountryPairList* temp = mainMonitor.getCountryToMonitor();
+        temp->print();
+        while (temp != NULL) {
+            if (temp->getMonitor() == id) {
+                // cout << "line:50 " << temp->getMonitor() << " " << temp->getCountry() << endl;
+                mainMonitor.sendCountry(temp->getCountry(), id, false);
+            }
+            temp = temp->getNext();
+        }
+        // cout << "line:55" << endl;
+        int fd = mainMonitor.getMonitors()->getWriteFifo(id);
+        int end = -1;
+        if (write(fd, &end, sizeof(int)) == -1)
+            cout << "Error in writting end with errno=" << errno << endl;
+        // cout << "line:62" << endl;
+        mainMonitor.receiveBlooms(id);
+        // cout << "line:64" << endl;
+        mainMonitor.sendStr(id, "DONE");
+        cout << "Done re forking Monitor" << endl;
+    }
 }
 
 
@@ -76,19 +104,21 @@ void travelMonitor::sendSIGTERM(int monitor) {
 
 void travelMonitor::killAllMonitors() {
     for (int i = 0;i < numMonitors;i++) {
-        cout << "Send SIGINT to monitor " << this->monitors->getPID(i) << endl;
-        sendSIGINT(i);
+        cout << "Send SIGKILL to monitor " << this->monitors->getPID(i) << endl;
+        sendSIGKILL(i);
     }
 }
 
 travelMonitor::travelMonitor() {
     handlerSIGINT_SIGQUIT.sa_handler = signal_handler_SIGINT_SIGQUIT;
-    sigfillset(&(handlerSIGINT_SIGQUIT.sa_mask));
+    sigemptyset(&(handlerSIGINT_SIGQUIT.sa_mask));
+    handlerSIGINT_SIGQUIT.sa_flags = SA_RESTART;
     sigaction(SIGQUIT, &handlerSIGINT_SIGQUIT, NULL);
     sigaction(SIGINT, &handlerSIGINT_SIGQUIT, NULL);
 
     handlerSIGCHLD.sa_handler = signal_handler_SIGCHLD;
-    sigfillset(&(handlerSIGCHLD.sa_mask));
+    sigemptyset(&(handlerSIGCHLD.sa_mask));
+    handlerSIGCHLD.sa_flags = SA_RESTART;
     sigaction(SIGCHLD, &handlerSIGCHLD, NULL);
 }
 
@@ -150,48 +180,63 @@ void travelMonitor::createFIFOs() {
 
 void travelMonitor::createMonitors() {
     for (int i = 0;i < numMonitors;i++) {
-        pid_t c_pid = fork();
-        if (c_pid == -1) {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
-        else if (c_pid > 0) {
-            cout << "Monitor " << i << " Created" << endl;
-            this->addMonitor(c_pid, i);
-        }
-        else {
-            string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
-            string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
+        createMonitor(i);
+    }
+}
+void travelMonitor::createMonitor(int i) {
+    pid_t c_pid = fork();
+    if (c_pid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+    else if (c_pid > 0) {
+        cout << "Monitor " << i << " Created with pid " << c_pid << endl;
+        this->addMonitor(c_pid, i);
+    }
+    else {
+        string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
+        string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
 
-            execlp("./Monitor", pipe0.c_str(), pipe1.c_str(), NULL);
-        }
+        execlp("./Monitor", pipe0.c_str(), pipe1.c_str(), NULL);
     }
 }
 
+
 void travelMonitor::openFifos() {
     for (int i = 0;i < numMonitors;i++) {
-        string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
-        string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
-        int fd0 = open(pipe0.c_str(), O_WRONLY);
-        int fd1 = open(pipe1.c_str(), O_RDONLY);
-        // cout << "i=" << i << ",writefd=" << fd0 << ",readfd=" << fd1 << endl;
-        this->addFdToMonitor(i, fd1, fd0);
+        openFifo(i);
     }
+}
+void travelMonitor::openFifo(int i) {
+
+    string pipe0 = "pipes/fifo_tW_mR_" + to_string(i);
+    string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
+    int fd0 = open(pipe0.c_str(), O_WRONLY);
+    int fd1 = open(pipe1.c_str(), O_RDONLY);
+    cout << "i=" << i << ",writefd=" << fd0 << ",readfd=" << fd1 << endl;
+    this->addFdToMonitor(i, fd1, fd0);
+
 }
 
 void travelMonitor::sendCredentials() {
     for (int i = 0;i < numMonitors;i++) {
-        int fd = this->monitors->getWriteFifo(i);
-        // cout << "i=" << i << ",writefd=" << fd << endl;
-        if (write(fd, &i, sizeof(int)) == -1)
-            cout << "Error in writting id with errno=" << errno << endl;
-        if (write(fd, &this->bufferSize, sizeof(int)) == -1)
-            cout << "Error in writting bufferSize with errno=" << errno << endl;
-        if (write(fd, &this->sizeOfBloom, sizeof(int)) == -1)
-            cout << "Error in writting sizeOfBloom with errno=" << errno << endl;
-
-        sendStr(i, this->input_dir);
+        sendCredential(i);
     }
+}
+
+void travelMonitor::sendCredential(int i) {
+
+    int fd = this->monitors->getWriteFifo(i);
+    cout << "sendCredential i=" << i << ",writefd=" << fd << endl;
+    if (write(fd, &i, sizeof(int)) == -1)
+        cout << "Error in writting id with errno=" << errno << endl;
+    if (write(fd, &this->bufferSize, sizeof(int)) == -1)
+        cout << "Error in writting bufferSize with errno=" << errno << endl;
+    if (write(fd, &this->sizeOfBloom, sizeof(int)) == -1)
+        cout << "Error in writting sizeOfBloom with errno=" << errno << endl;
+
+    sendStr(i, this->input_dir);
+
 }
 
 void travelMonitor::sendCountries() {
@@ -209,11 +254,8 @@ void travelMonitor::sendCountries() {
                 free(coutriesDir[i]);
                 continue;
             }
-            cout << country << "->" << monitor << endl;
-            this->addCountryToMonitor(country, monitor);
 
-            cout << "Sending to monitor " << monitor << " the country " << country << endl;
-            sendStr(monitor, country);
+            sendCountry(country, monitor, true);
 
             monitor++;
             if (monitor >= this->numMonitors)
@@ -231,6 +273,14 @@ void travelMonitor::sendCountries() {
             cout << "Error in writting end with errno=" << errno << endl;
     }
 }
+void travelMonitor::sendCountry(string country, int monitor, bool first) {
+    cout << country << "->" << monitor << endl;
+    if (first)
+        this->addCountryToMonitor(country, monitor);
+
+    cout << "Sending to monitor " << monitor << " the country " << country << endl;
+    sendStr(monitor, country);
+}
 
 void travelMonitor::receiveBlooms() {
     fd_set fileDecriptorSet;
@@ -247,40 +297,9 @@ void travelMonitor::receiveBlooms() {
         for (int i = 0;i < this->numMonitors;i++) {
             if (FD_ISSET(this->monitors->getReadFifo(i), &fileDecriptorSet)) {
                 cout << "Monitor" << i << " is ready!" << endl;
-                int end = 0;
-                while (1) {
-                    string virus = receiveManyStr(i, &end);
-                    if (end == -1 || virus == "")
-                        break;
-                    addNewVirus(virus);
-                    cout << "Got virus=" << virus << " from Monitor " << i << endl;
-                }
-                cout << "Updating blooms from Monitor " << i << endl;
-                while (1) {
 
-                    string virus = receiveStr(i);
+                receiveBlooms(i);
 
-                    if (virus.compare("END BLOOMS") == 0) {
-                        cout << "Done updating blooms" << endl;
-                        break;
-                    }
-
-                    int pos = 0;
-                    int fd = this->monitors->getReadFifo(i);
-                    char* bloomArray = this->blooms->getBloom(this->viruses->search(virus))->getArray();
-                    for (int i = 0;i <= this->sizeOfBloom / this->bufferSize;i++) {
-                        char buff[this->bufferSize];
-                        if (read(fd, &buff, this->bufferSize) == -1)
-                            cout << "Error in reading bit with errno=" << errno << endl;
-
-                        for (int i = 0; i < this->bufferSize;i++)
-                            bloomArray[pos + i] = bloomArray[pos + i] | buff[i];
-
-                        pos += this->bufferSize;
-                    }
-                    cout << virus << " ";
-                    this->blooms->getBloom(this->viruses->search(virus))->print();
-                }
                 totalRead++;
             }
             if (totalRead == this->numMonitors) {
@@ -293,8 +312,41 @@ void travelMonitor::receiveBlooms() {
     sendDone();
 }
 
-void travelMonitor::receiveBlooms(int monitor) {
+void travelMonitor::receiveBlooms(int i) {
+    int end = 0;
+    while (1) {
+        string virus = receiveManyStr(i, &end);
+        if (end == -1 || virus == "")
+            break;
+        addNewVirus(virus);
+        cout << "Got virus=" << virus << " from Monitor " << i << endl;
+    }
+    cout << "Updating blooms from Monitor " << i << endl;
+    while (1) {
 
+        string virus = receiveStr(i);
+
+        if (virus.compare("END BLOOMS") == 0) {
+            cout << "Done updating blooms" << endl;
+            break;
+        }
+
+        int pos = 0;
+        int fd = this->monitors->getReadFifo(i);
+        char* bloomArray = this->blooms->getBloom(this->viruses->search(virus))->getArray();
+        for (int i = 0;i <= this->sizeOfBloom / this->bufferSize;i++) {
+            char buff[this->bufferSize];
+            if (read(fd, &buff, this->bufferSize) == -1)
+                cout << "Error in reading bit with errno=" << errno << endl;
+
+            for (int i = 0; i < this->bufferSize;i++)
+                bloomArray[pos + i] = bloomArray[pos + i] | buff[i];
+
+            pos += this->bufferSize;
+        }
+        cout << virus << " ";
+        this->blooms->getBloom(this->viruses->search(virus))->print();
+    }
 }
 
 void travelMonitor::sendDone() {
@@ -303,12 +355,11 @@ void travelMonitor::sendDone() {
 }
 
 void travelMonitor::startMenu() {
-    do
+    while (1)
     {
-        sleep(20);
-        int pid = this->monitors->getPID(1);
-        kill(pid, SIGUSR1);
         string input = getInput("Enter command: ");
+        // int pid = this->monitors->getPID(1);
+        // kill(pid, SIGUSR1);
         int length;
         this->command = readString(input, &length);
         if (length > 0)
@@ -332,7 +383,7 @@ void travelMonitor::startMenu() {
                 cout << "Invalid command!" << endl;
         }
         delete[] command;
-    } while (1);
+    }
 }
 
 
@@ -452,6 +503,13 @@ void travelMonitor::travelRequest(string* arguments, int length) {
 void travelMonitor::travelStats(string* arguments, int length) {
     cout << endl;
     cout << "- Selected: /travelStats" << endl;
+
+    if (!(length == 4 || length == 5)) {
+        cout << "ERROR 3-4 Arguments must be given" << endl;
+        cout << "ERROR Total arguments given was: " << length - 1 << endl;
+        return;
+    }
+
     int t = 0;
     int f = 0;
     string virusName = arguments[1];
@@ -476,6 +534,7 @@ void travelMonitor::travelStats(string* arguments, int length) {
     cout << "- date2: ";
     checkDate2.print();
     cout << endl;
+
     if (length == 4) {
         cout << endl;
         statsList* temp = this->requests;
@@ -490,6 +549,7 @@ void travelMonitor::travelStats(string* arguments, int length) {
         cout << "TOTAL REQUESTS " << t + f << endl;
         cout << "ACCEPTED " << t << endl;
         cout << "REJECTED " << f << endl;
+        cout << endl;
     }
     else if (length == 5) {
         string country = arguments[4];
@@ -507,6 +567,7 @@ void travelMonitor::travelStats(string* arguments, int length) {
         cout << "TOTAL REQUESTS " << t + f << endl;
         cout << "ACCEPTED " << t << endl;
         cout << "REJECTED " << f << endl;
+        cout << endl;
     }
     else {
         cout << "ERROR 3-4 Arguments must be given" << endl;
@@ -518,13 +579,14 @@ void travelMonitor::addVaccinationRecords(string* arguments, int length) {
     cout << endl;
     cout << "- Selected: /addVaccinationRecords" << endl;
 
-    string country = arguments[1];
-    cout << "- country: " << country << endl;
-
     if (length == 2) {
+        string country = arguments[1];
+        cout << "- country: " << country << endl;
         if (this->countryToMonitor->search(country) != NULL) {
-            sendStr(this->countryToMonitor->search(country)->getMonitor(), "break");
+            // sendStr(this->countryToMonitor->search(country)->getMonitor(), "break");
             this->sendSIGUSR1(this->countryToMonitor->search(country)->getMonitor());
+            mainMonitor.receiveBlooms(this->countryToMonitor->search(country)->getMonitor());
+            mainMonitor.sendStr(this->countryToMonitor->search(country)->getMonitor(), "DONE");
         }
         else {
             cout << "ERROR country= " << country << " dont exist" << endl;

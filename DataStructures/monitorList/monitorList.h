@@ -24,6 +24,7 @@ public:
     int getReadFifo(int m);
     int getWriteFifo(int m);
     int getPID(int m);
+    monitorList* getPIDNode(int m);
     int getID(int pid);
 
     // GETTERS
@@ -40,6 +41,7 @@ public:
     void setID(int i) { this->id = i; }
     void setNext(monitorList* n) { this->next = n; }
 
+    void print();
 private:
     int readFD;
     int writeFD;

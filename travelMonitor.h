@@ -22,11 +22,15 @@ public:
 
     void createFIFOs();
     void createMonitors();
+    void createMonitor(int i);
     void openFifos();
+    void openFifo(int i);
     void sendCredentials();
+    void sendCredential(int i);
     void sendCountries();
+    void sendCountry(string country, int i, bool first);
     void receiveBlooms();
-    void receiveBlooms(int monitor);
+    void receiveBlooms(int i);
     void sendDone();
     void startMenu();
 
@@ -57,6 +61,10 @@ public:
     void printAllViruses();
 
     void printCountryToMonitor();
+
+    monitorList* getMonitors() { return this->monitors; }
+    monitorCountryPairList* getCountryToMonitor() { return this->countryToMonitor; }
+
 private:
     struct sigaction handlerSIGINT_SIGQUIT;
     struct sigaction handlerSIGCHLD;

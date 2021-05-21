@@ -31,7 +31,7 @@ void signal_handler_SIGINT_SIGQUIT(int signo) {
 void signal_handler_SIGUSR1(int signo) {
     cout << "signal_handler_SIGUSR1" << endl;
     monitor.readFilesAndCreateStructures();
-    // monitor.sendBlooms();
+    monitor.sendBlooms();
 }
 
 void Monitor::waitForSignals() {
@@ -55,14 +55,16 @@ void Monitor::suicide() {
         delete this->filesReaded;
     if (this->command != NULL)
         delete[] this->command;
-
+    // close(readFD);
+    // close(writeFD);
     cout << "Monitor " << getpid() << " Terminated" << endl;
-    kill(getpid(), SIGKILL);
+    exit(1);
 }
 
 void Monitor::waitForCommands() {
-    do
+    while (1)
     {
+        cout << "Waiting for commands " << this->id << endl;
         string input = receiveStr();
         int length;
         this->command = readString(input, &length);
@@ -71,26 +73,12 @@ void Monitor::waitForCommands() {
             if (command[0].compare("/travelRequest") == 0)
                 this->travelRequest(command, length);
 
-            // else if (command[0].compare("/travelStats") == 0)
-            //     this->travelStats(command, length);
-
-            // else if (command[0].compare("/addVaccinationRecords") == 0)
-            //     this->addVaccinationRecords(command, length);
-
-            // else if (command[0].compare("/searchVaccinationStatus") == 0)
-            //     this->searchVaccinationStatus(command, length);
-
-            // else if (command[0].compare("/exit") == 0)
-            // {
-            //     this->terminate();
-            //     delete[] command;
-            //     break;
-            // }
-            else if (command[0].compare("break") != 0)
+            else
                 cout << "Invalid command!" << endl;
         }
-        delete[] command;
-    } while (1);
+        if (command != NULL)
+            delete[] command;
+    }
 }
 
 void Monitor::travelRequest(string* arguments, int length) {
@@ -123,7 +111,6 @@ void Monitor::travelRequest(string* arguments, int length) {
 }
 
 void Monitor::makeLogFile() {
-    cout << getpid() << endl;
     int pid = getpid();
     ofstream logfile("logfiles/log_file." + to_string(pid));
     stringList* temp = this->countries;
@@ -138,42 +125,19 @@ void Monitor::makeLogFile() {
 }
 
 Monitor::Monitor() {
+    // cout << "kalisperaaa" << endl;
+
     handlerSIGINT_SIGQUIT.sa_handler = signal_handler_SIGINT_SIGQUIT;
-    sigfillset(&(handlerSIGINT_SIGQUIT.sa_mask));
+    sigemptyset(&(handlerSIGINT_SIGQUIT.sa_mask));
+    handlerSIGINT_SIGQUIT.sa_flags = SA_RESTART;
     sigaction(SIGQUIT, &handlerSIGINT_SIGQUIT, NULL);
     sigaction(SIGINT, &handlerSIGINT_SIGQUIT, NULL);
 
     handlerSIGUSR1.sa_handler = signal_handler_SIGUSR1;
-    sigfillset(&(handlerSIGUSR1.sa_mask));
+    sigemptyset(&(handlerSIGUSR1.sa_mask));
+    handlerSIGUSR1.sa_flags = SA_RESTART;
     sigaction(SIGUSR1, &handlerSIGUSR1, NULL);
 }
-
-// Monitor::Monitor(string r, string w) : readFifo(r), writeFifo(w) {
-//     readFD = open(this->readFifo.c_str(), O_RDONLY);
-//     writeFD = open(this->writeFifo.c_str(), O_WRONLY);
-
-//     this->tree = NULL;
-//     this->countries = new stringList();
-//     checkNew(this->countries);
-
-//     this->viruses = new stringList();
-//     checkNew(this->viruses);
-
-//     this->filesReaded = new stringList();
-//     checkNew(this->filesReaded);
-
-//     this->skipLists = new skipList_List();
-//     checkNew(this->skipLists);
-
-//     this->t = 0;
-//     this->f = 0;
-
-//     this->handler.sa_handler = signal_handler;
-//     sigemptyset(&(handler.sa_mask));
-//     sigaction(SIGINT, &this->handler, NULL);
-//     sigaction(SIGQUIT, &this->handler, NULL);
-//     sigaction(SIGUSR1, &this->handler, NULL);
-// }
 
 void Monitor::start(string r, string w) {
     this->readFifo = r;
@@ -204,6 +168,7 @@ Monitor::~Monitor() {
 }
 
 void Monitor::receiveCredentials() {
+    cout << "monitor cred " << readFD << endl;
     if (read(readFD, &this->id, sizeof(int)) == -1)
         cout << "Monitor error in reading id with errno=" << errno << endl;
     if (read(readFD, &this->bufferSize, sizeof(int)) == -1)
@@ -212,9 +177,8 @@ void Monitor::receiveCredentials() {
         cout << "Monitor " << this->id << " error in reading bloomSize with errno=" << errno << endl;
     this->blooms = new bloomFilterList(this->bloomSize);
     checkNew(this->blooms);
-    cout << "Monitor " << this->id << ", bufferSize=" << this->bufferSize << ", bloomSize=" << this->bloomSize << endl;
-
     this->generalDirectory = receiveStr();
+    cout << "Monitor " << this->id << ", bufferSize=" << this->bufferSize << ", bloomSize=" << this->bloomSize << ", generalDirectory=" << this->generalDirectory << endl;
 
 }
 

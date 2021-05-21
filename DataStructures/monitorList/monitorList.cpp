@@ -17,7 +17,15 @@ monitorList::~monitorList()
 
 monitorList* monitorList::add(int pid, int id)
 {
-    monitorList* temp = this;
+    monitorList* temp = this->getPIDNode(id);
+    if (temp != NULL) {
+        // already exists then update the pid
+        cout << "old pid " << temp->getPID() << endl;
+        temp->setPID(pid);
+        cout << "new pid " << temp->getPID() << endl;
+        return temp;
+    }
+    temp = this;
     while (temp->getNext() != NULL)
         temp = temp->getNext();
 
@@ -32,8 +40,10 @@ monitorList* monitorList::addFD(int m, int r, int w)
     monitorList* temp = this;
     for (int i = 0;i < m;i++)
         temp = temp->getNext();
+    cout << "old fd " << temp->getReadFD() << " " << temp->getWriteFD() << endl;
     temp->setReadFD(r);
     temp->setWriteFD(w);
+    cout << "new fd " << temp->getReadFD() << " " << temp->getWriteFD() << endl;
     return temp;
 }
 
@@ -61,6 +71,14 @@ int monitorList::getPID(int m) {
     return temp->getPID();
 }
 
+monitorList* monitorList::getPIDNode(int m) {
+    monitorList* temp = this;
+    for (int i = 0;i < m;i++)
+        temp = temp->getNext();
+
+    return temp;
+}
+
 int monitorList::getID(int pid) {
     monitorList* temp = this;
     while (temp != NULL) {
@@ -69,4 +87,12 @@ int monitorList::getID(int pid) {
         temp = temp->getNext();
     }
     return -1;
+}
+
+void monitorList::print() {
+    monitorList* temp = this;
+    while (temp != NULL) {
+        cout << temp->id << " " << temp->pid << endl;
+        temp = temp->getNext();
+    }
 }

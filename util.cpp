@@ -119,6 +119,8 @@ string getInput(string prompt)
     cin.seekg(0, ios::end);
     cin.clear();
     getline(cin, value);
+    // cin.seekg(0, ios::end);
+    // cin.clear();
     return value;
 }
 
@@ -158,7 +160,7 @@ string* readString(string input, int* length)
     string* arguments = new string[i - 1];
     if (arguments == NULL)
     {
-        cout << "errno = " << errno << endl;
+        cout << "readString errno = " << errno << endl;
         perror("errno");
         exit(EXIT_FAILURE);
     }
