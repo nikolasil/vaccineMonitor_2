@@ -24,20 +24,14 @@ using namespace std;
 Monitor monitor = Monitor();
 
 void signal_handler_SIGINT_SIGQUIT(int signo) {
-    cout << "signal_handler_SIGINT_SIGQUIT" << endl;
+    // cout << "signal_handler_SIGINT_SIGQUIT" << endl;
     monitor.makeLogFile();
     monitor.suicide();
 }
 void signal_handler_SIGUSR1(int signo) {
-    cout << "signal_handler_SIGUSR1" << endl;
+    // cout << "signal_handler_SIGUSR1" << endl;
     monitor.readFilesAndCreateStructures();
     monitor.sendBlooms();
-}
-
-void Monitor::waitForSignals() {
-    cout << "Waiting for singlas" << endl;
-    sleep(5);
-    cout << "Done for singlas" << endl;
 }
 
 void Monitor::suicide() {
@@ -64,7 +58,7 @@ void Monitor::suicide() {
 void Monitor::waitForCommands() {
     while (1)
     {
-        cout << "Waiting for commands " << this->id << endl;
+        // cout << "Waiting for commands " << this->id << endl;
         string input = receiveStr();
         int length;
         this->command = readString(input, &length);
@@ -132,7 +126,7 @@ void Monitor::searchVaccinationStatus(string* arguments, int length) {
 
         listStatus* status = citizen->getCitizen()->getStatus();
         while (status != NULL) {
-            cout << "1" << endl;
+            // cout << "1" << endl;
             string virusStatus = "";
             virusStatus.append(status->getVirusName()->getString());
             if (status->getVirusStatus() == 'y') {
@@ -173,7 +167,6 @@ void Monitor::makeLogFile() {
 }
 
 Monitor::Monitor() {
-    // cout << "kalisperaaa" << endl;
 
     handlerSIGINT_SIGQUIT.sa_handler = signal_handler_SIGINT_SIGQUIT;
     sigemptyset(&(handlerSIGINT_SIGQUIT.sa_mask));
@@ -216,7 +209,7 @@ Monitor::~Monitor() {
 }
 
 void Monitor::receiveCredentials() {
-    cout << "monitor cred " << readFD << endl;
+    // cout << "monitor cred " << readFD << endl;
     if (read(readFD, &this->id, sizeof(int)) == -1)
         cout << "Monitor error in reading id with errno=" << errno << endl;
     if (read(readFD, &this->bufferSize, sizeof(int)) == -1)
@@ -226,7 +219,7 @@ void Monitor::receiveCredentials() {
     this->blooms = new bloomFilterList(this->bloomSize);
     checkNew(this->blooms);
     this->generalDirectory = receiveStr();
-    cout << "Monitor " << this->id << ", bufferSize=" << this->bufferSize << ", bloomSize=" << this->bloomSize << ", generalDirectory=" << this->generalDirectory << endl;
+    cout << "Monitor got" << this->id << ", bufferSize=" << this->bufferSize << ", bloomSize=" << this->bloomSize << ", generalDirectory=" << this->generalDirectory << endl;
 
 }
 
@@ -234,9 +227,10 @@ void Monitor::receiveCountries() {
     int end = 0;
     while (end != -1) {
         string country = receiveManyStr(&end);
-        if (country != "")
+        if (country != "") {
             this->addNewCountry(country);
-        cout << "Monitor " << this->id << " got country=" << country << endl;
+            cout << "Monitor " << this->id << " got country=" << country << endl;
+        }
     }
 }
 
@@ -264,7 +258,7 @@ void Monitor::readFilesAndCreateStructures() {
                 fullpath.append("/");
                 fullpath.append(FILE);
                 if (this->addNewFile(fullpath)) {
-                    cout << "new file " << fullpath << endl;
+                    cout << "File: " << fullpath << endl;
                     this->addFromFile(fullpath);
                 }
             }
@@ -457,7 +451,7 @@ void Monitor::sendBlooms() {
 
 void Monitor::receiveDone()
 {
-    cout << this->id << " " << receiveStr() << endl;
+    receiveStr();
 }
 
 void Monitor::addNewVirus(string virusName)
@@ -568,7 +562,7 @@ string Monitor::receiveManyStr(int* end) {
             if (errno != 4)
                 cout << "Monitor " << this->id << " error in reading buff with errno=" << errno << endl;
         buff[sizeOfStr] = '\0';
-        cout << "test " << buff << endl;
+        // cout << "test " << buff << endl;
         str.append(buff);
     }
     return str;

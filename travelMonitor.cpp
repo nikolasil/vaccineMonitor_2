@@ -23,13 +23,13 @@ using namespace std;
 travelMonitor mainMonitor = travelMonitor();
 
 void signal_handler_SIGINT_SIGQUIT(int signo) {
-    cout << "TravelMonitor signal_handler_SIGINT_SIGQUIT" << endl;
+    // cout << "TravelMonitor signal_handler_SIGINT_SIGQUIT" << endl;
     mainMonitor.killAllMonitors();
     mainMonitor.suicide();
 }
 
 void signal_handler_SIGCHLD(int signo) {
-    cout << "TravelMonitor signal_handler_SIGCHLD" << endl;
+    // cout << "TravelMonitor signal_handler_SIGCHLD" << endl;
     pid_t pid;
     int status;
     cout << "Checking to see who terminated" << endl;
@@ -37,7 +37,7 @@ void signal_handler_SIGCHLD(int signo) {
     if (status > 0) {
         cout << pid << " is terminated" << endl;
         int id = mainMonitor.getMonitors()->getID(pid);
-        cout << "The id was " << id << endl;
+        // cout << "The id was " << id << endl;
         mainMonitor.createMonitor(id);
         mainMonitor.openFifo(id);
         // cout << "line:43" << endl;
@@ -61,7 +61,7 @@ void signal_handler_SIGCHLD(int signo) {
         mainMonitor.receiveBlooms(id);
         // cout << "line:64" << endl;
         mainMonitor.sendStr(id, "DONE");
-        cout << "Done re forking Monitor" << endl;
+        cout << "Done recreating Monitor" << endl;
     }
 }
 
@@ -127,7 +127,7 @@ void travelMonitor::start(int m, int b, int s, string dir) {
     this->bufferSize = b;
     this->sizeOfBloom = s;
     this->input_dir = dir;
-    cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
+    // cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
     this->countryToMonitor = NULL;
     this->monitors = NULL;
     this->viruses = new stringList();
@@ -197,7 +197,7 @@ void travelMonitor::openFifo(int i) {
     string pipe1 = "pipes/fifo_tR_mW_" + to_string(i);
     int fd0 = open(pipe0.c_str(), O_WRONLY);
     int fd1 = open(pipe1.c_str(), O_RDONLY);
-    cout << "i=" << i << ",writefd=" << fd0 << ",readfd=" << fd1 << endl;
+    // cout << "i=" << i << ",writefd=" << fd0 << ",readfd=" << fd1 << endl;
     this->addFdToMonitor(i, fd1, fd0);
 
 }
@@ -211,7 +211,7 @@ void travelMonitor::sendCredentials() {
 void travelMonitor::sendCredential(int i) {
 
     int fd = this->monitors->getWriteFifo(i);
-    cout << "sendCredential i=" << i << ",writefd=" << fd << endl;
+    // cout << "sendCredential i=" << i << ",writefd=" << fd << endl;
     if (write(fd, &i, sizeof(int)) == -1)
         cout << "Error in writting id with errno=" << errno << endl;
     if (write(fd, &this->bufferSize, sizeof(int)) == -1)
@@ -258,7 +258,7 @@ void travelMonitor::sendCountries() {
     }
 }
 void travelMonitor::sendCountry(string country, int monitor, bool first) {
-    cout << country << "->" << monitor << endl;
+    // cout << country << "->" << monitor << endl;
     if (first)
         this->addCountryToMonitor(country, monitor);
 
@@ -303,7 +303,7 @@ void travelMonitor::receiveBlooms(int i) {
         if (end == -1 || virus == "")
             break;
         addNewVirus(virus);
-        cout << "Got virus=" << virus << " from Monitor " << i << endl;
+        // cout << "Got virus=" << virus << " from Monitor " << i << endl;
     }
     cout << "Updating blooms from Monitor " << i << endl;
     while (1) {
@@ -328,8 +328,8 @@ void travelMonitor::receiveBlooms(int i) {
 
             pos += this->bufferSize;
         }
-        cout << virus << " ";
-        this->blooms->getBloom(this->viruses->search(virus))->print();
+        // cout << virus << " ";
+        // this->blooms->getBloom(this->viruses->search(virus))->print();
     }
 }
 
@@ -428,7 +428,7 @@ void travelMonitor::travelRequest(string* arguments, int length) {
             if (countryToMonitor->search(countryFrom) != NULL) {
                 sendStr(countryToMonitor->search(countryFrom)->getMonitor(), s);
                 string res = receiveStr(countryToMonitor->search(countryFrom)->getMonitor());
-                cout << res << endl;
+                // cout << res << endl;
                 if (res == "NO") {
                     cout << "REQUEST REJECTED – YOU ARE NOT VACCINATED" << endl;
                     this->addRequest(countryFrom, virusName, checkDate, false);

@@ -47,7 +47,6 @@ public:
 
     void makeLogFile();
 
-    void waitForSignals();
     void waitForCommands();
 private:
     int id;
