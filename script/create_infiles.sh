@@ -1,10 +1,9 @@
 #! /bin/bash
-
+START=$(date +%s) # starting time
 inputFile=$1
 input_dir=$2
 numFilesPerDirectory=$3
 declare -a CountriesArr
-declare -a lines;
 declare -A numFiles;
 
 if [ $# -ne 3 ];
@@ -41,6 +40,8 @@ do
     fi
 done < ../$inputFile
 
+printf "Created directories and files\n"
+
 while IFS= read -r line;
 do 
     IFS=' ' read -r -a splitedLine <<< $line
@@ -54,3 +55,8 @@ do
     numFiles+=([$country]=$((${numFiles[$country]}+1)))
     cd ../
 done < ../$inputFile
+
+printf "\n"
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+printf "Done: It took $DIFF seconds\n"
