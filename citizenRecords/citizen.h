@@ -40,6 +40,7 @@ public:
     stringList* getVirusName() { return this->virusName; }
     char getVirusStatus() { return this->status; }
     date getDateVaccinated() { return this->dateVaccinated; }
+    listStatus* getNext() { return this->next; }
 
     // SETTERS
     void setStatus(char status) { this->status = status; }

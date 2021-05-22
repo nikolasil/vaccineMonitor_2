@@ -137,22 +137,6 @@ void travelMonitor::start(int m, int b, int s, string dir) {
     checkNew(this->blooms);
 }
 
-// travelMonitor::travelMonitor(int m, int b, int s, string dir) : numMonitors(m), bufferSize(b), sizeOfBloom(s), input_dir(dir) {
-    // cout << "numMonitors=" << this->numMonitors << ", bufferSize= " << this->bufferSize << ", sizeOfBloom= " << this->sizeOfBloom << ", input_dir= " << this->input_dir << endl;
-    // this->countryToMonitor = NULL;
-    // this->requests = NULL;
-    // this->monitors = NULL;
-    // this->viruses = new stringList();
-    // checkNew(this->viruses);
-    // this->blooms = new bloomFilterList(this->sizeOfBloom);
-    // checkNew(this->blooms);
-
-    // this->handler.sa_handler = signal_handler;
-    // sigemptyset(&(handler.sa_mask));
-    // sigaction(SIGCHLD, &this->handler, NULL);
-    // sigaction(SIGINT, &this->handler, NULL);
-// }
-
 void travelMonitor::createFIFOs() {
     string directory = "pipes/";
     for (int i = 0;i < numMonitors;i++) {
@@ -599,7 +583,42 @@ void travelMonitor::addVaccinationRecords(string* arguments, int length) {
 }
 
 void travelMonitor::searchVaccinationStatus(string* arguments, int length) {
+    cout << endl;
+    cout << "- Selected: /searchVaccinationStatus" << endl;
 
+    if (length == 2) {
+        cout << "- citizenID: " << arguments[1] << endl;
+        cout << endl;
+        string s = "/searchVaccinationStatus";
+        s.append(" " + arguments[1]);
+        for (int i = 0;i < this->numMonitors;i++)
+            sendStr(i, s);
+        int monitor = -1;
+        int buff;
+        for (int i = 0;i < this->numMonitors;i++) {
+            if (read(this->monitors->getReadFifo(i), &buff, sizeof(int)) == -1)
+                if (errno != 4)
+                    cout << "Error in reading sizeOfStr with errno=" << errno << endl;
+            if (buff == 1) {
+                monitor = i;
+                cout << "Monitor " << monitor << " had that citizen" << endl;
+                break;
+            }
+        }
+        if (monitor == -1) {
+            cout << "CITIZEN NOT FOUND" << endl;
+            return;
+        }
+        int end = 1;
+        while (end != -1) {
+            cout << receiveManyStr(monitor, &end) << endl;
+        }
+        cout << endl;
+    }
+    else {
+        cout << "ERROR 1 Arguments must be given" << endl;
+        cout << "ERROR Total arguments given was: " << length - 1 << endl;
+    }
 }
 
 void travelMonitor::sendStr(int monitor, string str) {

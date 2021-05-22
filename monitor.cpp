@@ -55,8 +55,8 @@ void Monitor::suicide() {
         delete this->filesReaded;
     if (this->command != NULL)
         delete[] this->command;
-    // close(readFD);
-    // close(writeFD);
+    close(readFD);
+    close(writeFD);
     cout << "Monitor " << getpid() << " Terminated" << endl;
     exit(1);
 }
@@ -72,6 +72,9 @@ void Monitor::waitForCommands() {
         {
             if (command[0].compare("/travelRequest") == 0)
                 this->travelRequest(command, length);
+
+            if (command[0].compare("/searchVaccinationStatus") == 0)
+                this->searchVaccinationStatus(command, length);
 
             else
                 cout << "Invalid command!" << endl;
@@ -107,6 +110,51 @@ void Monitor::travelRequest(string* arguments, int length) {
     else {
         sendStr("NO");
         f++;
+    }
+}
+
+void Monitor::searchVaccinationStatus(string* arguments, int length) {
+    id = stoi(arguments[1]);
+    treeNode* citizen = this->tree->search(this->tree, id);
+    if (citizen != NULL) {
+        int end = 1;
+        if (write(writeFD, &end, sizeof(int)) == -1)
+            if (errno != 4)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+        string credentials = arguments[1] + " " + citizen->getCitizen()->getFirstName();
+        credentials.append(" " + citizen->getCitizen()->getLastName());
+        credentials.append(" " + citizen->getCitizen()->getCountry()->getString());
+        sendStr(credentials);
+
+        string age = "AGE ";
+        age.append(to_string(citizen->getCitizen()->getAge()));
+        sendStr(age);
+
+        listStatus* status = citizen->getCitizen()->getStatus();
+        while (status != NULL) {
+            cout << "1" << endl;
+            string virusStatus = "";
+            virusStatus.append(status->getVirusName()->getString());
+            if (status->getVirusStatus() == 'y') {
+                virusStatus.append(" VACCINATED ON ");
+                virusStatus.append(status->getDateVaccinated().getConcatenate());
+            }
+            else {
+                virusStatus.append(" NOT YET VACCINATED");
+            }
+            sendStr(virusStatus);
+            status = status->getNext();
+        }
+        end = -1;
+        if (write(writeFD, &end, sizeof(int)) == -1)
+            if (errno != 4)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
+    }
+    else {
+        int end = -1;
+        if (write(writeFD, &end, sizeof(int)) == -1)
+            if (errno != 4)
+                cout << "Error in writting to_tranfer with errno=" << errno << endl;
     }
 }
 
