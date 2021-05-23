@@ -14,10 +14,19 @@ elif [ ! -s $inputFile ];
 then
     printf "inputFile error!\n"
     exit
-elif ! [[ $numFilesPerDirectory =~ ^[0-9]+$ ]] || [ $numFilesPerDirectory -lt 0 ] || [ $numFilesPerDirectory -eq 0 ];
+elif ! [[ $numFilesPerDirectory =~ ^[0-9]+$ ]];
 then
     printf "numFilesPerDirectory error!\n"
     exit
+elif [ $numFilesPerDirectory -lt 0 ];
+then
+    printf "numFilesPerDirectory error!\n"
+    exit
+elif [ $numFilesPerDirectory -eq 0 ];
+then
+    printf "numFilesPerDirectory error!\n"
+    exit
+
 fi
 
 mkdir -p $input_dir
@@ -25,7 +34,7 @@ cd $input_dir
  
 while IFS= read -r line;
 do
-    subDirectory=$(echo $line | awk '{print $4}')
+    subDirectory=$(printf %s "$line" | awk '{print $4}')
     if [ ! -d $subDirectory ];
     then
         CountriesArr+=("$subDirectory")
@@ -47,7 +56,8 @@ do
     IFS=' ' read -r -a splitedLine <<< $line
     country=${splitedLine[3]}
     cd $country
-    echo $line >> ${country}-${numFiles[$country]}.txt
+    printf %s "$line" >> ${country}-${numFiles[$country]}.txt
+    echo "" >> ${country}-${numFiles[$country]}.txt
     if [ $((${numFiles[$country]} % $numFilesPerDirectory)) -eq 0 ];
     then       
         numFiles+=([$country]=0)

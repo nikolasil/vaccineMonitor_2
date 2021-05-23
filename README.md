@@ -5,7 +5,7 @@
 
 Makefile is included. Use the command **make** to compile the source code.
 
-To run the application use: **./travelMonitor -m inputFile.txt -b bufferSize -s sizeOfBloom -i input_dir **
+To run the application use: **./travelMonitor -m inputFile.txt -b bufferSize -s sizeOfBloom -i input_dir**
 
 > *Note* that the order of the arguments doesn't matter.
 
@@ -31,9 +31,25 @@ To run the application use: **./travelMonitor -m inputFile.txt -b bufferSize -s 
 
 ---
 
+### General
+
+- The first thing i send to the Monitor is some usefull things such us his unique id, bufferSize, sizeofbloom, input_dir.
+
+- I have functions sendStr() and receiveStr(). That reads and writes ftom the correct pipe.
+
+- At the start of sending a string from the pipe. I firstly send the length of the string and then the string in parts based on the bufferSize.
+Then the receiver will know the length of the string that will come and in how many parts it will be send. Then it takes those strings parts and concatenate them.
+
+- In order to know when i have to stop reading strings i made the convension when the length of the string is -1 it means i have to stop.
+
+- To catch the signals i used sigaction()
+
+
+---
+
 ### **Structure & Classes**
 
-I used all the structures from the exercise 1 that i made.
+**I used all the structures from the exercise 1 that i made**
 
 #### travelMonitor
 ```cpp
@@ -103,6 +119,57 @@ private:
 };
 ```
 
+#### monitorCountryPairList
+
+This list has the information about which country is assigned to which monitor.
+
+```cpp
+class monitorCountryPairList
+{
+public:
+    // Methods
+private:
+    string country;
+    int monitor;
+    monitorCountryPairList* next;
+};
+```
+#### monitorList
+
+This list has the read and write file decriptor for each monitor. As well as the pid and unique id number that i use.
+
+```cpp
+class monitorList
+{
+public:
+    // Methods
+private:
+    int readFD;
+    int writeFD;
+    int pid;
+    int id;
+
+    monitorList* next;
+};
+```
+
+#### statsList
+This list holds has ont node for every request. So i can make the statistics in the /travelStats command.
+```cpp
+class statsList
+{
+public:
+    // Methods
+private:
+    string country;
+    string virusName;
+    date d;
+    bool stat;
+    statsList* next;
+};
+
+```
+
 ---
 
 ### **Commands**
@@ -114,7 +181,7 @@ At the start i check:
 - id is only numbers
 - 0 <= id <= 9999
 
-If the virus is not in the virus list it is obvius we dont have to look the bloom filter to see that this id has not made the virus so return **REQUEST REJECTED – YOU ARE NOT VACCINATED**.
+If the virus is not in the virus list it is obvious we dont have to look the bloom filter to see that this id has not made the virus so return **REQUEST REJECTED – YOU ARE NOT VACCINATED**.
 If we have that virus we hash the id and check the 16 bits to be set to 1. If all of them are 1 then we send the command to the correct Monitor to take an answer.
 
 #### /travelStats
@@ -129,7 +196,7 @@ The monitor cathes it and loops throw all the files. And if the file is not in t
 #### /searchVaccinationStatus
 
 - Send to the Monitors the command
-- if the monitor does not have the citizen send me -1 if it has 1.
+- if the monitor does not have the citizen send me -1 if it has returns 1.
 - Then i read from the monitor that sends me 1 and print the things that it sends me.
 
 ### **Script**
